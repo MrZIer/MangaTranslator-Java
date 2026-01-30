@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -96,6 +97,14 @@ public class SessionService {
      */
     public List<TranslationSession> getUserSessions(String userFingerprint) {
         return sessionRepository.findByUserFingerprintOrderByCreatedAtDesc(userFingerprint);
+    }
+    
+    /**
+     * 更新会话
+     */
+    public TranslationSession updateSession(TranslationSession session) {
+        session.setUpdatedAt(LocalDateTime.now());
+        return sessionRepository.save(session);
     }
     
     /**

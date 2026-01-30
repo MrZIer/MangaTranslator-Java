@@ -67,7 +67,7 @@ public class TranslationService {
         this.redisTemplate = redisTemplate;
     }
 
-    public String translate(String text, String targetLanguage, TranslationEngine engine) {
+    public String translate(String text, String targetLanguage, TranslationEngine engine, Map<String, String> glossary) {
         // 检查缓存
         String cacheKey = generateCacheKey(text, targetLanguage, engine);
         String cached = (String) redisTemplate.opsForValue().get(cacheKey);
@@ -78,10 +78,10 @@ public class TranslationService {
 
         // 根据引擎选择翻译方法
         String translated = switch (engine) {
-            case OPENAI -> translateWithOpenAI(text, targetLanguage);
-            case CLAUDE -> translateWithClaude(text, targetLanguage);
-            case DEEPSEEK -> translateWithDeepSeek(text, targetLanguage);
-            case ZHIPU -> translateWithZhipu(text, targetLanguage);  // 新增
+            case OPENAI -> translateWithOpenAI(text, targetLanguage, glossary);
+            case CLAUDE -> translateWithClaude(text, targetLanguage, glossary);
+            case DEEPSEEK -> translateWithDeepSeek(text, targetLanguage, glossary);
+            case ZHIPU -> translateWithZhipu(text, targetLanguage);
         };
 
         // 缓存结果
@@ -143,8 +143,6 @@ public class TranslationService {
     private String translateWithOpenAI(String text, String targetLanguage, Map<String, String> glossary) {
         String prompt = buildTranslationPrompt(text, targetLanguage, glossary);
         
-        WebClient webClient = webClientBuilder.baseUrl(openaiBaseUrl).build();
-        
         Map<String, Object> request = new HashMap<>();
         request.put("model", openaiModel);
         request.put("messages", new Object[]{
@@ -154,7 +152,7 @@ public class TranslationService {
         request.put("temperature", 0.3);
         
         Mono<Map> response = webClient.post()
-                .uri("/chat/completions")
+                .uri(openaiBaseUrl + "/chat/completions")
                 .header("Authorization", "Bearer " + openaiApiKey)
                 .bodyValue(request)
                 .retrieve()
@@ -179,8 +177,6 @@ public class TranslationService {
     private String translateWithClaude(String text, String targetLanguage, Map<String, String> glossary) {
         String prompt = buildTranslationPrompt(text, targetLanguage, glossary);
         
-        WebClient webClient = webClientBuilder.baseUrl(claudeBaseUrl).build();
-        
         Map<String, Object> request = new HashMap<>();
         request.put("model", claudeModel);
         request.put("max_tokens", 1024);
@@ -189,7 +185,7 @@ public class TranslationService {
         });
         
         Mono<Map> response = webClient.post()
-                .uri("/messages")
+                .uri(claudeBaseUrl + "/messages")
                 .header("x-api-key", claudeApiKey)
                 .header("anthropic-version", "2023-06-01")
                 .bodyValue(request)
@@ -215,8 +211,6 @@ public class TranslationService {
         // DeepSeek API与OpenAI兼容
         String prompt = buildTranslationPrompt(text, targetLanguage, glossary);
         
-        WebClient webClient = webClientBuilder.baseUrl(deepseekBaseUrl).build();
-        
         Map<String, Object> request = new HashMap<>();
         request.put("model", deepseekModel);
         request.put("messages", new Object[]{
@@ -226,7 +220,7 @@ public class TranslationService {
         request.put("temperature", 0.3);
         
         Mono<Map> response = webClient.post()
-                .uri("/chat/completions")
+                .uri(deepseekBaseUrl + "/chat/completions")
                 .header("Authorization", "Bearer " + deepseekApiKey)
                 .bodyValue(request)
                 .retrieve()

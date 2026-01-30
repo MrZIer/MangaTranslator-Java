@@ -75,6 +75,9 @@ public class UploadController {
             session.setTargetLanguage(request.getTargetLanguage());
             session.setOutputFormat(request.getOutputFormat());
             
+            // 保存更新后的会话信息
+            session = sessionService.updateSession(session);
+            
             // 启动异步处理任务
             asyncTaskService.processTranslationTask(
                     session.getId(), 
