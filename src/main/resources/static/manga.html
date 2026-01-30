@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫画翻译工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .upload-section {
+            text-align: center;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 60px 20px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .config-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .config-item label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .config-item select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            background: white;
+        }
+
+        .config-item select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .status-section {
+            display: none;
+        }
+
+        .status-section.active {
+            display: block;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .status-text {
+            text-align: center;
+            font-size: 1.1em;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .stage-text {
+            text-align: center;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .result-section {
+            text-align: center;
+        }
+
+        .result-image {
+            max-width: 100%;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .file-info {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .file-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .file-info strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>📚 漫画翻译工具</h1>
+            <p>上传漫画图片，自动识别并翻译文本</p>
+        </div>
+
+        <!-- 错误提示 -->
+        <div id="errorAlert" class="alert alert-error" style="display: none;"></div>
+        <div id="successAlert" class="alert alert-success" style="display: none;"></div>
+
+        <!-- 上传区域 -->
+        <div id="uploadSection" class="card upload-section">
+            <h2>上传漫画图片</h2>
+            
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="fileInput" accept="image/*" hidden>
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">点击选择文件或拖拽到此处</div>
+                <div class="upload-hint">支持 JPG、PNG、JPEG 格式</div>
+            </div>
+
+            <div id="fileInfo" class="file-info" style="display: none;">
+                <p><strong>文件名:</strong> <span id="fileName"></span></p>
+                <p><strong>大小:</strong> <span id="fileSize"></span></p>
+            </div>
+
+            <!-- 配置选项 -->
+            <div class="config-section">
+                <div class="config-item">
+                    <label>🌐 源语言</label>
+                    <select id="sourceLanguage">
+                        <option value="ja" selected>日语 (Japanese)</option>
+                        <option value="en">英语 (English)</option>
+                        <option value="ko">韩语 (Korean)</option>
+                    </select>
+                </div>
+
+                <div class="config-item">
+                    <label>🎯 目标语言</label>
+                    <select id="targetLanguage">
+                        <option value="zh" selected>中文 (Chinese)</option>
+                        <option value="en">英语 (English)</option>
+                        <option value="ja">日语 (Japanese)</option>
+                    </select>
+                </div>
+
+                <div class="config-item">
+                    <label>🔧 翻译引擎</label>
+                    <select id="engine">
+                        <option value="zhipu" selected>智谱AI</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="claude">Claude</option>
+                        <option value="deepseek">DeepSeek</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="uploadBtn" disabled>
+                开始翻译
+            </button>
+        </div>
+
+        <!-- 处理状态 -->
+        <div id="statusSection" class="card status-section">
+            <h2>处理进度</h2>
+            
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+                <div class="status-text" id="statusText">准备中...</div>
+                <div class="stage-text" id="stageText"></div>
+            </div>
+        </div>
+
+        <!-- 结果展示 -->
+        <div id="resultSection" class="card result-section" style="display: none;">
+            <h2>✅ 翻译完成</h2>
+            
+            <button class="btn btn-success" id="downloadBtn">
+                ⬇️ 下载翻译结果
+            </button>
+
+            <button class="btn btn-primary" id="newTranslationBtn" style="margin-top: 10px;">
+                📤 翻译新图片
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let currentSessionId = null;
+        let selectedFile = null;
+        let pollingInterval = null;
+
+        // 元素引用
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadSection = document.getElementById('uploadSection');
+        const statusSection = document.getElementById('statusSection');
+        const resultSection = document.getElementById('resultSection');
+        const progressFill = document.getElementById('progressFill');
+        const statusText = document.getElementById('statusText');
+        const stageText = document.getElementById('stageText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const newTranslationBtn = document.getElementById('newTranslationBtn');
+        const errorAlert = document.getElementById('errorAlert');
+        const successAlert = document.getElementById('successAlert');
+
+        // 文件选择事件
+        uploadArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // 拖拽上传
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect();
+            }
+        });
+
+        // 处理文件选择
+        function handleFileSelect() {
+            if (fileInput.files.length === 0) return;
+            
+            selectedFile = fileInput.files[0];
+            
+            // 验证文件类型
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!allowedTypes.includes(selectedFile.type)) {
+                showError('请上传 JPG 或 PNG 格式的图片');
+                return;
+            }
+
+            // 验证文件大小 (10MB)
+            if (selectedFile.size > 10 * 1024 * 1024) {
+                showError('文件大小不能超过 10MB');
+                return;
+            }
+
+            // 显示文件信息
+            fileName.textContent = selectedFile.name;
+            fileSize.textContent = formatFileSize(selectedFile.size);
+            fileInfo.style.display = 'block';
+            uploadBtn.disabled = false;
+        }
+
+        // 上传并开始翻译
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('engine', document.getElementById('engine').value.toUpperCase());
+            formData.append('sourceLanguage', document.getElementById('sourceLanguage').value);
+            formData.append('targetLanguage', document.getElementById('targetLanguage').value);
+            formData.append('outputFormat', 'PNG');
+
+            try {
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<span class="loading-spinner"></span> 上传中...';
+
+                const response = await fetch(`${API_BASE}/api/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    currentSessionId = data.data.sessionId;
+                    showSuccess('上传成功，开始处理...');
+                    
+                    // 切换到状态显示
+                    uploadSection.style.display = 'none';
+                    statusSection.classList.add('active');
+                    
+                    // 开始轮询状态
+                    startPolling();
+                } else {
+                    throw new Error(data.message || '上传失败');
+                }
+            } catch (error) {
+                showError('上传失败: ' + error.message);
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '开始翻译';
+            }
+        });
+
+        // 轮询任务状态
+        function startPolling() {
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/status/${currentSessionId}`);
+                    const data = await response.json();
+
+                    if (data.success && data.data) {
+                        updateProgress(data.data);
+
+                        // 检查是否完成
+                        if (data.data.status === 'COMPLETED') {
+                            stopPolling();
+                            showResult();
+                        } else if (data.data.status === 'FAILED') {
+                            stopPolling();
+                            showError('翻译失败: ' + (data.data.errorMessage || '未知错误'));
+                            resetToUpload();
+                        }
+                    }
+                } catch (error) {
+                    console.error('轮询错误:', error);
+                }
+            }, 2000); // 每2秒轮询一次
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        // 更新进度
+        function updateProgress(data) {
+            const progress = data.progress || 0;
+            progressFill.style.width = progress + '%';
+            progressFill.textContent = progress + '%';
+            statusText.textContent = getStatusText(data.status);
+            stageText.textContent = data.currentStage || '';
+        }
+
+        // 显示结果
+        function showResult() {
+            statusSection.classList.remove('active');
+            resultSection.style.display = 'block';
+        }
+
+        // 下载结果
+        downloadBtn.addEventListener('click', async () => {
+            try {
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = '<span class="loading-spinner"></span> 下载中...';
+
+                window.location.href = `${API_BASE}/api/upload/download/${currentSessionId}`;
+                
+                setTimeout(() => {
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = '⬇️ 下载翻译结果';
+                    showSuccess('下载已开始');
+                }, 1000);
+            } catch (error) {
+                showError('下载失败: ' + error.message);
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = '⬇️ 下载翻译结果';
+            }
+        });
+
+        // 重新翻译
+        newTranslationBtn.addEventListener('click', () => {
+            resetToUpload();
+        });
+
+        // 重置到上传界面
+        function resetToUpload() {
+            currentSessionId = null;
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '开始翻译';
+            uploadSection.style.display = 'block';
+            statusSection.classList.remove('active');
+            resultSection.style.display = 'none';
+            progressFill.style.width = '0%';
+            progressFill.textContent = '0%';
+        }
+
+        // 工具函数
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'PENDING': '等待处理...',
+                'UPLOADING': '上传中...',
+                'DETECTING': '检测文本区域...',
+                'OCR_PROCESSING': '识别文本...',
+                'TRANSLATING': '翻译中...',
+                'RENDERING': '渲染结果...',
+                'COMPLETED': '翻译完成！',
+                'FAILED': '处理失败'
+            };
+            return statusMap[status] || status;
+        }
+
+        function showError(message) {
+            errorAlert.textContent = message;
+            errorAlert.style.display = 'block';
+            successAlert.style.display = 'none';
+            setTimeout(() => {
+                errorAlert.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            successAlert.textContent = message;
+            successAlert.style.display = 'block';
+            errorAlert.style.display = 'none';
+            setTimeout(() => {
+                successAlert.style.display = 'none';
+            }, 3000);
+        }
+
+        // 页面卸载时停止轮询
+        window.addEventListener('beforeunload', stopPolling);
+    </script>
+</body>
+</html>

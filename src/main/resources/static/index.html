@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫画翻译工具 - Manga Translation</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-book-reader"></i>
+                <h1>漫画翻译工具</h1>
+            </div>
+            <div class="header-info">
+                <span id="connection-status" class="status-badge">
+                    <i class="fas fa-circle"></i> 连接正常
+                </span>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 上传区域 -->
+            <section class="upload-section card">
+                <h2><i class="fas fa-cloud-upload-alt"></i> 上传漫画</h2>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" accept="image/*,.pdf,.zip" multiple hidden>
+                    <div class="upload-placeholder">
+                        <i class="fas fa-images"></i>
+                        <p>拖拽文件到此处，或点击选择文件</p>
+                        <p class="upload-hint">支持 JPG, PNG, PDF, ZIP 格式</p>
+                    </div>
+                </div>
+
+                <!-- 翻译配置 -->
+                <div class="config-section">
+                    <div class="config-row">
+                        <div class="config-item">
+                            <label><i class="fas fa-language"></i> 源语言</label>
+                            <select id="sourceLanguage">
+                                <option value="ja">日语 (Japanese)</option>
+                                <option value="en">英语 (English)</option>
+                                <option value="ko">韩语 (Korean)</option>
+                                <option value="zh">中文 (Chinese)</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label><i class="fas fa-globe"></i> 目标语言</label>
+                            <select id="targetLanguage">
+                                <option value="zh">中文 (Chinese)</option>
+                                <option value="en">英语 (English)</option>
+                                <option value="ja">日语 (Japanese)</option>
+                                <option value="ko">韩语 (Korean)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="config-row">
+                        <div class="config-item">
+                            <label><i class="fas fa-robot"></i> 翻译引擎</label>
+                            <select id="translationEngine">
+                                <option value="ZHIPU">智谱清言 (推荐)</option>
+                                <option value="OPENAI">OpenAI GPT-4</option>
+                                <option value="CLAUDE">Claude 3.5</option>
+                                <option value="DEEPSEEK">DeepSeek</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label><i class="fas fa-file-export"></i> 输出格式</label>
+                            <select id="outputFormat">
+                                <option value="SINGLE_IMAGE">单页图片</option>
+                                <option value="MULTI_IMAGE">多页图片</option>
+                                <option value="PDF">PDF文档</option>
+                                <option value="EPUB">EPUB电子书</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="startTranslation">
+                        <i class="fas fa-play"></i> 开始翻译
+                    </button>
+                </div>
+            </section>
+
+            <!-- 任务列表 -->
+            <section class="tasks-section card">
+                <h2><i class="fas fa-tasks"></i> 翻译任务</h2>
+                <div id="tasksList" class="tasks-list">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>暂无翻译任务</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 历史记录 -->
+            <section class="history-section card">
+                <h2><i class="fas fa-history"></i> 历史记录</h2>
+                <div class="history-controls">
+                    <button class="btn-secondary" id="refreshHistory">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                    <button class="btn-secondary" id="clearHistory">
+                        <i class="fas fa-trash"></i> 清空
+                    </button>
+                </div>
+                <div id="historyList" class="history-list">
+                    <div class="empty-state">
+                        <i class="fas fa-clock"></i>
+                        <p>暂无历史记录</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 底部 -->
+        <footer class="footer">
+            <p>&copy; 2026 漫画翻译工具 | Powered by Spring Boot & 智谱清言</p>
+        </footer>
+    </div>
+
+    <!-- 进度弹窗 -->
+    <div id="progressModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-spinner fa-spin"></i> 翻译进行中</h3>
+            </div>
+            <div class="modal-body">
+                <div class="progress-info">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progressBar">
+                            <span id="progressText">0%</span>
+                        </div>
+                    </div>
+                    <p id="progressStage">准备中...</p>
+                    <p id="progressDetail"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知容器 -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+# === Java/Gradle build output ===
+build/
+target/
+*.jar
+*.war
+.gradle/
+
+# === IDE config ===
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+out/
+bin/
+
+# === Python cache ===
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.Python
+venv/
+env/
+
+# === Model & large files (>10MB) ===
+*.h5
+*.hdf5
+*.pth
+*.pt
+*.onnx
+*.ckpt
+*.bin
+*.safetensors
+*.pkl
+*.pickle
+*.weights
+*.pb
+*.tflite
+
+# === Archives ===
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.gz
+*.tgz
+*.bz2
+
+# === Images & Media ===
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.webp
+*.tiff
+*.gif
+*.mp4
+*.mov
+*.avi
+
+# === Manga/Comic files ===
+*.cbz
+*.cbr
+*.pdf
+
+# === Local outputs ===
+storage/
+uploads/
+results/
+tmp/
+logs/
+*.log
+*.tmp
+
+# === Comic text detector (克隆的子项目) ===
+comic-text-detector/
+
+# === 翻译结果 ===
+translated_*.jpg
+*_translated.*
+detection_*.jpg
+ocr_*.json
+translation_*.json
+final_*.json
+test_*.jpg
