@@ -1,49 +1,113 @@
 # 快速开始指南
 
-## 一、环境准备
+## ⚡ 一键启动（最简单，推荐）
+
+### Windows 用户
+
+```cmd
+# 1. 克隆项目
+git clone https://github.com/yourusername/mangaTrans.git
+cd mangaTrans
+
+# 2. 运行一键启动脚本
+run.bat
+```
+
+### Linux/Mac 用户
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/yourusername/mangaTrans.git
+cd mangaTrans
+
+# 2. 运行一键启动脚本
+chmod +x run.sh
+./run.sh
+```
+
+**✨ 脚本会自动完成以下操作：**
+- ✅ 检查 Java 17+ 环境
+- ✅ 检查 Python 3.8+ 环境  
+- ✅ 检查 MongoDB 数据库
+- ✅ 创建 Python 虚拟环境
+- ✅ 安装所有 Python 依赖
+- ✅ 下载 AI 模型文件（~1.3GB）
+- ✅ 启动 MongoDB 服务
+- ✅ 启动 Spring Boot 应用
+
+**🚀 启动完成后访问：**
+- API 服务：http://localhost:8080
+- 健康检查：http://localhost:8080/actuator/health
+
+---
+
+## 📋 环境配置
+
+### API 密钥配置
+
+编辑 `src/main/resources/application.properties`：
+
+```properties
+# 翻译API配置（至少配置一个）
+translation.openai.api-key=your-openai-key
+translation.claude.api-key=your-claude-key  
+translation.deepseek.api-key=your-deepseek-key
+```
+
+**获取 API 密钥：**
+- OpenAI: https://platform.openai.com/api-keys
+- Claude: https://console.anthropic.com/
+- DeepSeek: https://platform.deepseek.com/
+
+---
+
+## 🛠️ 手动启动（高级用户）
 
 ### 1. 安装必要软件
 
 - Java 17 或更高版本
+- Python 3.8+
 - MongoDB 4.4+
-- Redis 6.0+
-- (可选) Docker 和 Docker Compose
 
-### 2. 使用Docker Compose快速启动（推荐）
+### 2. 启动 MongoDB
 
 ```bash
-# 1. 创建.env文件，配置API密钥
-cat > .env << EOF
-OPENAI_API_KEY=your-openai-key-here
-CLAUDE_API_KEY=your-claude-key-here
-DEEPSEEK_API_KEY=your-deepseek-key-here
-EOF
-
-# 2. 启动所有服务（MongoDB、Redis、OCR服务）
-docker-compose up -d mongodb redis
-
-# 3. 等待服务启动（约10秒）
-sleep 10
-```
-
-### 3. 手动启动（不使用Docker）
-
-```bash
-# 启动MongoDB
+# 使用 Docker（推荐）
 docker run -d -p 27017:27017 --name mongodb mongo:7.0
 
-# 启动Redis
-docker run -d -p 6379:6379 --name redis redis:7.2-alpine
+# 或使用系统服务
+# Windows: net start MongoDB
+# Linux: sudo systemctl start mongod
+# Mac: brew services start mongodb-community
+```
 
-# 设置环境变量
-export OPENAI_API_KEY=your-key
-export CLAUDE_API_KEY=your-key
-export DEEPSEEK_API_KEY=your-key
+### 3. 安装 Python 依赖
+
+```bash
+# 创建虚拟环境
+python -m venv venv
+
+# 激活虚拟环境
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
+
+# 安装依赖
+pip install torch torchvision manga-ocr Pillow
+```
+
+### 4. 下载 AI 模型
+
+```bash
+# 下载文本检测模型（900MB）
+curl -o comictextdetector.pt.zip https://huggingface.co/ogkalu/Comic-Text-Detector-v2/resolve/main/comictextdetector.pt.zip
+unzip comictextdetector.pt.zip
 ```
 
 ## 二、启动应用
 
-### 方法1: 使用Gradle
+### 方法1: 使用 Gradle
 
 ```bash
 # Windows
