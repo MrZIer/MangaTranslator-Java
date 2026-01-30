@@ -121,7 +121,7 @@ mangaTrans/
 │   └── config/                 # 配置类
 ├── src/main/resources/
 │   ├── static/                 # 前端静态资源
-│   │   ├── manga.html          # 主界面
+│   │   ├── index.html          # 主界面
 │   │   ├── css/                # 样式文件
 │   │   └── js/                 # JavaScript
 │   └── application.properties  # 配置文件
@@ -234,8 +234,8 @@ GET /api/upload/download/{sessionId}
 
 ## 📧 联系方式
 
-- 项目地址: https://github.com/你的用户名/mangaTrans
-- 问题反馈: [Issues](https://github.com/你的用户名/mangaTrans/issues)
+- 项目地址: https://github.com/MrZIer/mangaTrans
+- 问题反馈: [Issues](https://github.com/MrZIer/mangaTrans/issues)
 
 ---
 
