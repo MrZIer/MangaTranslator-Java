@@ -31,7 +31,7 @@
 #### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/你的用户名/mangaTrans.git
+git clone https://github.com/MrZIer/MangaTranslator-Java.git
 cd mangaTrans
 ```
 
@@ -234,8 +234,8 @@ GET /api/upload/download/{sessionId}
 
 ## 📧 联系方式
 
-- 项目地址: https://github.com/MrZIer/mangaTrans
-- 问题反馈: [Issues](https://github.com/MrZIer/mangaTrans/issues)
+- 项目地址: https://github.com/MrZIer/MangaTranslator-Java.git
+- 问题反馈: [Issues](https://github.com/MrZIer/MangaTranslator-Java.git/issues)
 
 ---
 
