@@ -6,7 +6,8 @@ package com.example.mangaTrans.enums;
 public enum TranslationEngine {
     OPENAI("OpenAI GPT-4o"),
     CLAUDE("Claude 3.5"),
-    DEEPSEEK("DeepSeek");
+    DEEPSEEK("DeepSeek"),
+    ZHIPU("智谱清言");  // 新增
 
     private final String displayName;
 

@@ -1,36 +1,37 @@
 package com.example.mangaTrans.service;
 
 import com.example.mangaTrans.enums.TranslationEngine;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
-/**
- * 翻译服务（支持多引擎）
- */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TranslationService {
-    
-    private final WebClient.Builder webClientBuilder;
+
+    private final WebClient webClient;
     private final RedisTemplate<String, Object> redisTemplate;
-    
-    @Value("${translation.default-engine}")
-    private String defaultEngine;
-    
-    @Value("${translation.cache.ttl-days}")
+
+    @Value("${translation.cache.ttl-days:7}")
     private int cacheTtlDays;
-    
+
+    // 智谱清言配置
+    @Value("${translation.zhipu.api-key}")
+    private String zhipuApiKey;
+    @Value("${translation.zhipu.model:glm-4-flash}")
+    private String zhipuModel;
+    @Value("${translation.zhipu.base-url:https://open.bigmodel.cn/api/paas/v4}")
+    private String zhipuBaseUrl;
+
     // OpenAI配置
     @Value("${translation.openai.api-key}")
     private String openaiApiKey;
@@ -60,54 +61,82 @@ public class TranslationService {
     
     @Value("${translation.deepseek.base-url}")
     private String deepseekBaseUrl;
-    
-    /**
-     * 翻译文本
-     */
-    public String translate(String text, String targetLanguage, TranslationEngine engine, 
-                           Map<String, String> glossary) {
-        // 生成缓存键
+
+    public TranslationService(WebClient.Builder webClientBuilder, RedisTemplate<String, Object> redisTemplate) {
+        this.webClient = webClientBuilder.build();
+        this.redisTemplate = redisTemplate;
+    }
+
+    public String translate(String text, String targetLanguage, TranslationEngine engine) {
+        // 检查缓存
         String cacheKey = generateCacheKey(text, targetLanguage, engine);
-        
-        // 尝试从缓存获取
-        Object cached = redisTemplate.opsForValue().get(cacheKey);
+        String cached = (String) redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
-            log.debug("Translation found in cache");
-            return (String) cached;
+            log.info("Translation cache hit for key: {}", cacheKey);
+            return cached;
         }
-        
-        // 调用翻译API
-        log.info("Translating text with engine: {}", engine);
-        String translatedText;
-        
+
+        // 根据引擎选择翻译方法
+        String translated = switch (engine) {
+            case OPENAI -> translateWithOpenAI(text, targetLanguage);
+            case CLAUDE -> translateWithClaude(text, targetLanguage);
+            case DEEPSEEK -> translateWithDeepSeek(text, targetLanguage);
+            case ZHIPU -> translateWithZhipu(text, targetLanguage);  // 新增
+        };
+
+        // 缓存结果
+        redisTemplate.opsForValue().set(cacheKey, translated, cacheTtlDays, TimeUnit.DAYS);
+
+        return translated;
+    }
+
+    /**
+     * 使用智谱清言翻译
+     */
+    private String translateWithZhipu(String text, String targetLanguage) {
+        log.info("Translating with Zhipu API: {} characters", text.length());
+
+        String prompt = String.format(
+                "你是一个专业的漫画翻译助手。请将以下日文漫画文本翻译成%s，保持原文的语气和风格。\n\n原文：%s\n\n只返回翻译结果，不要包含任何解释。",
+                getLanguageName(targetLanguage),
+                text
+        );
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", zhipuModel);
+        requestBody.put("messages", List.of(
+                Map.of("role", "user", "content", prompt)
+        ));
+        requestBody.put("temperature", 0.3);
+        requestBody.put("max_tokens", 2000);
+
         try {
-            switch (engine) {
-                case OPENAI:
-                    translatedText = translateWithOpenAI(text, targetLanguage, glossary);
-                    break;
-                case CLAUDE:
-                    translatedText = translateWithClaude(text, targetLanguage, glossary);
-                    break;
-                case DEEPSEEK:
-                    translatedText = translateWithDeepSeek(text, targetLanguage, glossary);
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unsupported translation engine: " + engine);
+            Map<String, Object> response = webClient.post()
+                    .uri(zhipuBaseUrl + "/chat/completions")
+                    .header("Authorization", "Bearer " + zhipuApiKey)
+                    .header("Content-Type", "application/json")
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(30))
+                    .block();
+
+            if (response != null && response.containsKey("choices")) {
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+                    return (String) message.get("content");
+                }
             }
-            
-            // 缓存结果
-            if (translatedText != null && !translatedText.isEmpty()) {
-                redisTemplate.opsForValue().set(cacheKey, translatedText, 
-                        Duration.ofDays(cacheTtlDays));
-            }
-            
-            return translatedText;
+
+            throw new RuntimeException("Invalid response from Zhipu API");
+
         } catch (Exception e) {
-            log.error("Translation error: {}", e.getMessage(), e);
+            log.error("Zhipu translation failed", e);
             throw new RuntimeException("Translation failed: " + e.getMessage());
         }
     }
-    
+
     /**
      * 使用OpenAI翻译
      */
@@ -243,16 +272,34 @@ public class TranslationService {
      * 生成缓存键
      */
     private String generateCacheKey(String text, String targetLanguage, TranslationEngine engine) {
-        String raw = text + "|" + targetLanguage + "|" + engine.name();
-        String hash = DigestUtils.sha256Hex(raw);
-        return "translation:" + hash;
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            String input = text + ":" + targetLanguage + ":" + engine.name();
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            return "translation:" + bytesToHex(hash);
+        } catch (Exception e) {
+            return "translation:" + text.hashCode() + ":" + targetLanguage + ":" + engine.name();
+        }
     }
-    
-    /**
-     * 清除缓存
-     */
-    public void clearCache(String text, String targetLanguage, TranslationEngine engine) {
-        String cacheKey = generateCacheKey(text, targetLanguage, engine);
-        redisTemplate.delete(cacheKey);
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
     }
+
+    private String getLanguageName(String languageCode) {
+        return switch (languageCode.toLowerCase()) {
+            case "zh", "zh-cn", "chinese" -> "简体中文";
+            case "zh-tw", "traditional-chinese" -> "繁体中文";
+            case "en", "english" -> "English";
+            case "ja", "japanese" -> "日本語";
+            case "ko", "korean" -> "한국어";
+            default -> languageCode;
+        };
+    }
+
+    // ...existing code... (保留其他方法)
 }
