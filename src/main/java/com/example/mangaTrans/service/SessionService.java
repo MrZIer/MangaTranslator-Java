@@ -59,6 +59,13 @@ public class SessionService {
     }
     
     /**
+     * 保存会话
+     */
+    public TranslationSession saveSession(TranslationSession session) {
+        return sessionRepository.save(session);
+    }
+    
+    /**
      * 更新会话状态和进度
      */
     public void updateSessionProgress(String sessionId, TaskStatus status, Integer progress, String stage) {
