@@ -181,6 +181,9 @@ function addTask(task) {
             <div>当前阶段: 初始化</div>
         </div>
         <div class="task-actions">
+            <button class="btn-compare" onclick="showCompareView('${task.sessionId}')" style="display:none">
+                <i class="fas fa-columns"></i> 对比
+            </button>
             <button class="btn-download" disabled>
                 <i class="fas fa-download"></i> 下载
             </button>
@@ -256,10 +259,16 @@ function updateTaskProgress(sessionId, progress) {
         ${progress.errorMessage ? `<div style="color: var(--error-color);">错误: ${progress.errorMessage}</div>` : ''}
     `;
     
-    // 完成后启用下载按钮
+    // 完成后启用下载按钮和对比按钮
     if (progress.status === 'COMPLETED') {
         downloadBtn.disabled = false;
         downloadBtn.onclick = () => downloadResult(sessionId);
+        
+        // 显示对比按钮
+        const compareBtn = taskElement.querySelector('.btn-compare');
+        if (compareBtn) {
+            compareBtn.style.display = 'inline-flex';
+        }
     }
 }
 
@@ -426,6 +435,81 @@ function calculateDuration(startTime, endTime) {
     if (duration < 60) return `${duration}秒`;
     if (duration < 3600) return `${Math.floor(duration / 60)}分${duration % 60}秒`;
     return `${Math.floor(duration / 3600)}小时${Math.floor((duration % 3600) / 60)}分`;
+}
+
+// 显示对比视图
+async function showCompareView(sessionId) {
+    try {
+        const response = await fetch(`${API_BASE}/api/upload/compare/${sessionId}`);
+        if (!response.ok) throw new Error('获取对比图片失败');
+        
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message);
+        
+        const data = result.data;
+        
+        // 创建对比弹窗
+        const modal = document.createElement('div');
+        modal.className = 'compare-modal';
+        modal.innerHTML = `
+            <div class="compare-container">
+                <div class="compare-header">
+                    <h3><i class="fas fa-columns"></i> 翻译对比 - ${data.fileName}</h3>
+                    <button class="btn-close" onclick="closeCompareView()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="compare-content">
+                    <div class="compare-image-panel">
+                        <h4>原图</h4>
+                        <div class="image-wrapper">
+                            <img src="${data.originalImage}" alt="原图">
+                        </div>
+                    </div>
+                    <div class="compare-image-panel">
+                        <h4>翻译后</h4>
+                        <div class="image-wrapper">
+                            ${data.translatedImage ? 
+                                `<img src="${data.translatedImage}" alt="翻译后">` : 
+                                '<div class="loading-placeholder"><i class="fas fa-spinner fa-spin"></i> 翻译中...</div>'
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="compare-actions">
+                    <button class="btn-primary" onclick="downloadTranslated('${sessionId}')">
+                        <i class="fas fa-download"></i> 下载翻译结果
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // 点击背景关闭
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeCompareView();
+            }
+        });
+        
+    } catch (error) {
+        console.error('显示对比视图失败:', error);
+        showNotification('显示对比视图失败: ' + error.message, 'error');
+    }
+}
+
+// 关闭对比视图
+function closeCompareView() {
+    const modal = document.querySelector('.compare-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 下载翻译结果
+function downloadTranslated(sessionId) {
+    window.location.href = `${API_BASE}/api/upload/download/${sessionId}`;
 }
 
 // 定期检查服务器状态

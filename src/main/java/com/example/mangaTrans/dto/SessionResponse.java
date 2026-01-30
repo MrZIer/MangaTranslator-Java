@@ -1,6 +1,5 @@
 package com.example.mangaTrans.dto;
 
-import com.example.mangaTrans.enums.TaskStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class SessionResponse {
     private String sessionId;
     private String fileName;
-    private TaskStatus status;
+    private String status;  // 改为String类型，前端更容易处理
     private Integer progress;
     private String currentStage;
     private String errorMessage;

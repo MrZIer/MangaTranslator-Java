@@ -37,7 +37,7 @@ public class TaskController {
             SessionResponse response = new SessionResponse(
                     session.getId(),
                     session.getOriginalFileName(),
-                    session.getStatus(),
+                    session.getStatus().name(),  // 转换为字符串
                     session.getProgress(),
                     session.getCurrentStage(),
                     session.getErrorMessage()

@@ -97,7 +97,8 @@ def render_translated_image(original_image_path, translation_json_path, output_p
         img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         draw = ImageDraw.Draw(img_pil)
         
-        # 步骤2: 固定字体大小为20
+        # 步骤2: 固定字体大小为20px，以文本框中心为基准布局
+        font_size = 20
         font_size = 20
         
         # 加载字体
