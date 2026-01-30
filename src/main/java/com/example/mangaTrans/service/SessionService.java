@@ -26,11 +26,13 @@ public class SessionService {
     
     private final TranslationSessionRepository sessionRepository;
     private final FingerprintService fingerprintService;
+    private final FileStorageService fileStorageService;
     
     /**
      * 创建新的翻译会话
+     * @param isBatch 是否为批量上传（多张图片）
      */
-    public TranslationSession createSession(MultipartFile file, String userFingerprint) throws IOException {
+    public TranslationSession createSession(MultipartFile file, String userFingerprint, boolean isBatch) throws IOException {
         // 计算文件MD5哈希
         String fileHash = calculateFileHash(file.getInputStream());
         
@@ -52,8 +54,14 @@ public class SessionService {
         session.setStatus(TaskStatus.UPLOAD);
         session.setProgress(0);
         
+        // 创建会话专用目录（根据isBatch决定是否创建父文件夹）
+        String sessionDirectory = fileStorageService.createSessionDirectory(session.getId(), isBatch);
+        session.setSessionDirectory(sessionDirectory);
+        session.setOriginalFileDirectory(new java.io.File(sessionDirectory).getParent()); // 存储原始文件所在父目录
+        
         session = sessionRepository.save(session);
-        log.info("Created new session: {} for file: {}", session.getId(), file.getOriginalFilename());
+        log.info("Created new session: {} for file: {} with directory: {}", 
+                session.getId(), file.getOriginalFilename(), sessionDirectory);
         
         return session;
     }
@@ -112,6 +120,13 @@ public class SessionService {
     public TranslationSession updateSession(TranslationSession session) {
         session.setUpdatedAt(LocalDateTime.now());
         return sessionRepository.save(session);
+    }
+    
+    /**
+     * 获取所有已完成的会话
+     */
+    public List<TranslationSession> getAllCompletedSessions() {
+        return sessionRepository.findByStatusOrderByCompletedAtDesc(TaskStatus.COMPLETED);
     }
     
     /**

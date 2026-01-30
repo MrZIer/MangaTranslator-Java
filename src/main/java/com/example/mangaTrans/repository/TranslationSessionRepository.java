@@ -31,6 +31,11 @@ public interface TranslationSessionRepository extends MongoRepository<Translatio
     List<TranslationSession> findByStatus(TaskStatus status);
     
     /**
+     * 根据状态查找会话并按完成时间倒序排列
+     */
+    List<TranslationSession> findByStatusOrderByCompletedAtDesc(TaskStatus status);
+    
+    /**
      * 根据用户指纹和状态查找会话
      */
     List<TranslationSession> findByUserFingerprintAndStatusOrderByCreatedAtDesc(

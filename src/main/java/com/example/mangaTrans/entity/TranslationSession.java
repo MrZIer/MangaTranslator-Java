@@ -49,9 +49,12 @@ public class TranslationSession {
     private List<TextRegion> textRegions;           // 文本区域列表
     private Map<String, String> glossary;           // 术语表（用于翻译一致性）
     
-    private String uploadPath;                      // 上传文件路径
-    private String processedPath;                   // 处理后文件路径
-    private String resultPath;                      // 结果文件路径
+    private String sessionDirectory;                // 会话专用目录路径（session_YYYYMMDD_HHMMSS_ID）
+    private String originalFileDirectory;           // 原始上传文件所在目录路径
+    private String uploadPath;                      // 上传文件路径（original/子目录）
+    private String processedPath;                   // 预处理后文件路径（processed/子目录）
+    private String ocrResultPath;                   // OCR结果路径（ocr/子目录）
+    private String resultPath;                      // 翻译结果路径（translated/子目录）
     
     @Indexed(expireAfterSeconds = 86400)           // 24小时后自动删除
     private LocalDateTime createdAt;                // 创建时间

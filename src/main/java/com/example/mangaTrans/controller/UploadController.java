@@ -4,6 +4,7 @@ import com.example.mangaTrans.entity.TranslationSession;
 import com.example.mangaTrans.service.AsyncTaskService;
 import com.example.mangaTrans.service.FileStorageService;
 import com.example.mangaTrans.service.SessionService;
+import com.example.mangaTrans.service.ResultCollectionService;
 import com.example.mangaTrans.enums.OutputFormat;
 import com.example.mangaTrans.enums.TaskStatus;
 import com.example.mangaTrans.enums.TranslationEngine;
@@ -16,9 +17,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/upload")
@@ -33,6 +36,9 @@ public class UploadController {
 
     @Autowired
     private AsyncTaskService asyncTaskService;
+    
+    @Autowired
+    private ResultCollectionService resultCollectionService;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> uploadFile(
@@ -40,7 +46,8 @@ public class UploadController {
             @RequestParam(value = "sourceLanguage", defaultValue = "JA") String sourceLanguage,
             @RequestParam(value = "targetLanguage", defaultValue = "ZH") String targetLanguage,
             @RequestParam(value = "engine", defaultValue = "ZHIPU") String engineStr,
-            @RequestParam(value = "outputFormat", defaultValue = "PNG") String formatStr) {
+            @RequestParam(value = "outputFormat", defaultValue = "PNG") String formatStr,
+            @RequestParam(value = "isBatch", defaultValue = "false") boolean isBatch) {
 
         Map<String, Object> response = new HashMap<>();
 
@@ -57,10 +64,10 @@ public class UploadController {
             OutputFormat outputFormat = OutputFormat.valueOf(formatStr.toUpperCase());
 
             // 创建会话（如果文件已存在，会返回现有session）
-            TranslationSession session = sessionService.createSession(file, "default-user");
+            TranslationSession session = sessionService.createSession(file, "default-user", isBatch);
             
             // 检查是否是已存在的session
-            boolean isExistingSession = session.getUploadPath() != null;
+            boolean isExistingSession = session.getSessionDirectory() != null && session.getUploadPath() != null;
             
             if (isExistingSession) {
                 // 如果是已存在的session，检查状态
@@ -106,8 +113,10 @@ public class UploadController {
             session.setTargetLanguage(targetLanguage);
             session.setOutputFormat(outputFormat);
             
-            // 保存文件
-            String savedPath = fileStorageService.saveUploadedFile(file, session.getId());
+            // 保存文件到uploads目录
+            String savedPath = fileStorageService.saveUploadedFile(file, 
+                    session.getSessionDirectory(), 
+                    session.getOriginalFileName());
             session.setUploadPath(savedPath);
             
             // 保存 session 更改到数据库
@@ -255,6 +264,269 @@ public class UploadController {
                     
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/results")
+    public ResponseEntity<Map<String, Object>> getTranslationResults(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sessionId) {
+        
+        try {
+            Map<String, Object> response = new HashMap<>();
+            
+            // 获取所有已完成的翻译结果
+            List<Map<String, Object>> results = new ArrayList<>();
+            
+            if (sessionId != null) {
+                // 获取特定session的结果
+                Optional<TranslationSession> sessionOpt = sessionService.getSession(sessionId);
+                if (sessionOpt.isPresent()) {
+                    TranslationSession session = sessionOpt.get();
+                    if (session.getStatus() == TaskStatus.COMPLETED && session.getResultPath() != null) {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("sessionId", session.getId());
+                        result.put("originalFileName", session.getOriginalFileName());
+                        result.put("resultFileName", getFileNameFromPath(session.getResultPath()));
+                        result.put("originalImage", "/api/upload/image/" + session.getId() + "/original");
+                        result.put("translatedImage", "/api/upload/image/" + session.getId() + "/translated");
+                        result.put("downloadUrl", "/api/upload/download/" + session.getId());
+                        result.put("createdAt", session.getCreatedAt());
+                        result.put("completedAt", session.getCompletedAt());
+                        results.add(result);
+                    }
+                }
+            } else {
+                // 获取所有已完成的session
+                List<TranslationSession> sessions = sessionService.getAllCompletedSessions();
+                for (TranslationSession session : sessions) {
+                    if (session.getResultPath() != null) {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("sessionId", session.getId());
+                        result.put("originalFileName", session.getOriginalFileName());
+                        result.put("resultFileName", getFileNameFromPath(session.getResultPath()));
+                        result.put("originalImage", "/api/upload/image/" + session.getId() + "/original");
+                        result.put("translatedImage", "/api/upload/image/" + session.getId() + "/translated");
+                        result.put("downloadUrl", "/api/upload/download/" + session.getId());
+                        result.put("createdAt", session.getCreatedAt());
+                        result.put("completedAt", session.getCompletedAt());
+                        results.add(result);
+                    }
+                }
+            }
+            
+            // 排序（按完成时间倒序）
+            results.sort((a, b) -> {
+                Object aTime = a.get("completedAt");
+                Object bTime = b.get("completedAt");
+                if (aTime == null || bTime == null) return 0;
+                return ((Comparable) bTime).compareTo(aTime);
+            });
+            
+            // 分页
+            int total = results.size();
+            int fromIndex = page * size;
+            int toIndex = Math.min(fromIndex + size, total);
+            
+            List<Map<String, Object>> pageResults = fromIndex < total ? 
+                    results.subList(fromIndex, toIndex) : new ArrayList<>();
+            
+            Map<String, Object> pagination = new HashMap<>();
+            pagination.put("page", page);
+            pagination.put("size", size);
+            pagination.put("total", total);
+            pagination.put("totalPages", (int) Math.ceil((double) total / size));
+            pagination.put("hasNext", toIndex < total);
+            pagination.put("hasPrevious", page > 0);
+            
+            response.put("success", true);
+            response.put("data", pageResults);
+            response.put("pagination", pagination);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    private String getFileNameFromPath(String path) {
+        if (path == null) return null;
+        return Paths.get(path).getFileName().toString();
+    }
+    
+    /**
+     * 获取所有批量文件夹列表
+     */
+    @GetMapping("/batch-folders")
+    public ResponseEntity<Map<String, Object>> getBatchFolders() {
+        try {
+            List<File> batchFolders = fileStorageService.getBatchFolders();
+            
+            List<Map<String, String>> folderList = new ArrayList<>();
+            for (File folder : batchFolders) {
+                Map<String, String> info = new HashMap<>();
+                info.put("name", folder.getName());
+                info.put("path", folder.getAbsolutePath());
+                info.put("sessionCount", String.valueOf(
+                    fileStorageService.getSessionsInBatchFolder(folder.getAbsolutePath()).size()
+                ));
+                folderList.add(info);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("folders", folderList);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "获取批量文件夹列表失败: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    /**
+     * 汇总指定批量文件夹的翻译结果
+     */
+    @PostMapping("/collect-batch")
+    public ResponseEntity<Map<String, Object>> collectBatchResults(
+            @RequestBody Map<String, String> request) {
+        try {
+            String batchFolderPath = request.get("batchFolderPath");
+            
+            if (batchFolderPath == null || batchFolderPath.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "批量文件夹路径不能为空");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            Map<String, Object> result = resultCollectionService.collectBatchFolderResults(batchFolderPath);
+            
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "汇总批量文件夹失败: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    /**
+     * 汇总所有翻译结果到统一目录
+     */
+    @PostMapping("/collect-all")
+    public ResponseEntity<Map<String, Object>> collectAllResults() {
+        try {
+            Map<String, Object> result = resultCollectionService.collectAllResults();
+            
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "汇总失败: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    /**
+     * 汇总指定会话的翻译结果
+     */
+    @PostMapping("/collect/{sessionId}")
+    public ResponseEntity<Map<String, Object>> collectSessionResult(@PathVariable String sessionId) {
+        try {
+            Map<String, Object> result = resultCollectionService.collectSessionResult(sessionId);
+            
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "汇总失败: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    /**
+     * 从指定会话目录汇总结果到指定目标目录
+     */
+    @PostMapping("/collect-custom")
+    public ResponseEntity<Map<String, Object>> collectCustom(
+            @RequestBody Map<String, String> request) {
+        try {
+            String sessionDirectory = request.get("sessionDirectory");
+            String targetDirectory = request.get("targetDirectory");
+            
+            if (sessionDirectory == null || sessionDirectory.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "会话目录路径不能为空");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            if (targetDirectory == null || targetDirectory.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "目标目录路径不能为空");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            Map<String, Object> result = resultCollectionService.collectFromSessionDirectory(
+                    sessionDirectory, targetDirectory);
+            
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "汇总失败: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    /**
+     * 获取所有汇总目录列表
+     */
+    @GetMapping("/collections")
+    public ResponseEntity<Map<String, Object>> getCollections() {
+        try {
+            List<Map<String, Object>> collections = resultCollectionService.getCollectionDirectories();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", collections);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "获取汇总目录失败: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 }

@@ -73,7 +73,7 @@ public class TranslateController {
             // ????????????
             List<String> savedPaths = new ArrayList<>();
             for (MultipartFile file : files) {
-                String savedPath = fileStorageService.saveUploadedFile(file, taskId);
+                String savedPath = fileStorageService.saveUploadedFile(file, taskId, file.getOriginalFilename());
                 savedPaths.add(savedPath);
             }
             
@@ -81,7 +81,7 @@ public class TranslateController {
             
             // ??????????????????????
             Path outputDirPath = outputFolder != null ? Paths.get(outputFolder) : 
-                    fileStorageService.getResultDirectory(taskId);
+                    Paths.get(fileStorageService.getTranslatedPath(taskId));
             Files.createDirectories(outputDirPath);
             String outputDir = outputDirPath.toString();
             
@@ -183,7 +183,7 @@ public class TranslateController {
             @PathVariable String filename) {
         
         try {
-            Path filePath = fileStorageService.getResultDirectory(taskId).resolve(filename);
+            Path filePath = Paths.get(fileStorageService.getTranslatedPath(taskId)).resolve(filename);
             
             if (!Files.exists(filePath)) {
                 return ResponseEntity.notFound().build();

@@ -42,20 +42,15 @@ public class AsyncTaskService {
             File uploadFile = fileStorageService.getFilePath(session.getUploadPath()).toFile();
             String inputPath = uploadFile.getAbsolutePath();
             
-            // 输出文件路径：使用 原文件名_cn.jpg 格式
+            // 输出文件路径：使用 原文件名_cn.jpg 格式，输出到translator_result目录
             String originalFileName = session.getOriginalFileName();
             String baseName = originalFileName.substring(0, originalFileName.lastIndexOf('.'));
             String extension = originalFileName.substring(originalFileName.lastIndexOf('.'));
             String outputFileName = baseName + "_cn" + extension;
             
-            // 在输入文件同路径下创建 translated_output 文件夹
-            File inputFileParent = uploadFile.getParentFile().getParentFile(); // 跳过 originals 目录
-            File translatedOutputDir = new File(inputFileParent, "translated_output");
-            if (!translatedOutputDir.exists()) {
-                translatedOutputDir.mkdirs();
-            }
-            
-            File outputFile = new File(translatedOutputDir, outputFileName);
+            // 使用新的标准化目录结构：translator_result
+            String translatorResultPath = fileStorageService.getTranslatedPath(session.getSessionDirectory());
+            File outputFile = new File(translatorResultPath, outputFileName);
             String outputPath = outputFile.getAbsolutePath();
             
             log.info("Input: {}", inputPath);

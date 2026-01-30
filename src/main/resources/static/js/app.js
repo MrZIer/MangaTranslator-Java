@@ -96,8 +96,9 @@ async function startTranslation() {
     startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
     
     try {
+        const isBatch = files.length > 1; // 判断是否为批量上传
         for (const file of files) {
-            await uploadFile(file, sourceLanguage, targetLanguage, engine, outputFormat);
+            await uploadFile(file, sourceLanguage, targetLanguage, engine, outputFormat, isBatch);
         }
         
         // 重置表单
@@ -118,13 +119,14 @@ async function startTranslation() {
 }
 
 // 上传文件
-async function uploadFile(file, sourceLanguage, targetLanguage, engine, outputFormat) {
+async function uploadFile(file, sourceLanguage, targetLanguage, engine, outputFormat, isBatch = false) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('sourceLanguage', sourceLanguage);
     formData.append('targetLanguage', targetLanguage);
     formData.append('engine', engine);
     formData.append('outputFormat', outputFormat);
+    formData.append('isBatch', isBatch); // 传递批量标识
     
     const response = await fetch(`${API_BASE}/api/upload`, {
         method: 'POST',
@@ -510,6 +512,445 @@ function closeCompareView() {
 // 下载翻译结果
 function downloadTranslated(sessionId) {
     window.location.href = `${API_BASE}/api/upload/download/${sessionId}`;
+}
+
+// ============ 翻译结果浏览功能 ============
+
+// 分页状态
+let currentPage = 0;
+const pageSize = 12;
+let totalPages = 0;
+
+// 加载翻译结果列表
+async function loadResults(page = 0) {
+    try {
+        const response = await fetch(`${API_BASE}/api/upload/results?page=${page}&size=${pageSize}`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const results = result.data;
+            const pagination = result.pagination;
+            
+            currentPage = pagination.page;
+            totalPages = pagination.totalPages;
+            
+            renderResults(results);
+            renderPagination(pagination);
+        } else {
+            showEmptyResults();
+        }
+    } catch (error) {
+        console.error('加载结果失败:', error);
+        showNotification('加载结果失败: ' + error.message, 'error');
+        showEmptyResults();
+    }
+}
+
+// 渲染结果网格
+function renderResults(results) {
+    const resultsGrid = document.getElementById('resultsGrid');
+    
+    if (!results || results.length === 0) {
+        showEmptyResults();
+        return;
+    }
+    
+    resultsGrid.innerHTML = results.map(result => `
+        <div class="result-card" onclick="showCompareView('${result.sessionId}')">
+            <div class="result-card-image">
+                <img src="${result.translatedImage}" 
+                     alt="${result.resultFileName}"
+                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\'%3E%3Crect fill=\\'%23ddd\\' width=\\'100\\' height=\\'100\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' dy=\\'.3em\\' fill=\\'%23999\\'%3E暂无图片%3C/text%3E%3C/svg%3E'">
+                <div class="result-card-badge">
+                    <i class="fas fa-check"></i> 已完成
+                </div>
+            </div>
+            <div class="result-card-content">
+                <h3 class="result-card-title" title="${result.resultFileName}">
+                    ${result.resultFileName}
+                </h3>
+                <div class="result-card-meta">
+                    <span><i class="fas fa-file"></i> 原文件: ${result.originalFileName}</span>
+                    <span><i class="fas fa-calendar-alt"></i> 完成时间: ${formatDateTime(result.completedAt)}</span>
+                </div>
+                <div class="result-card-actions">
+                    <button class="btn-card btn-view" onclick="event.stopPropagation(); showCompareView('${result.sessionId}')">
+                        <i class="fas fa-eye"></i> 查看对比
+                    </button>
+                    <button class="btn-card btn-download" onclick="event.stopPropagation(); downloadTranslated('${result.sessionId}')">
+                        <i class="fas fa-download"></i> 下载
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 显示空结果
+function showEmptyResults() {
+    const resultsGrid = document.getElementById('resultsGrid');
+    resultsGrid.innerHTML = `
+        <div class="results-empty" style="grid-column: 1 / -1;">
+            <i class="fas fa-folder-open"></i>
+            <h3>暂无翻译结果</h3>
+            <p>上传图片开始翻译吧！</p>
+        </div>
+    `;
+    
+    // 隐藏分页
+    document.getElementById('pagination').style.display = 'none';
+}
+
+// 渲染分页控件
+function renderPagination(pagination) {
+    const paginationDiv = document.getElementById('pagination');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const pageNumbers = document.getElementById('pageNumbers');
+    
+    if (pagination.totalPages <= 1) {
+        paginationDiv.style.display = 'none';
+        return;
+    }
+    
+    paginationDiv.style.display = 'flex';
+    
+    // 上一页按钮
+    prevBtn.disabled = !pagination.hasPrevious;
+    
+    // 下一页按钮
+    nextBtn.disabled = !pagination.hasNext;
+    
+    // 页码按钮
+    pageNumbers.innerHTML = '';
+    const startPage = Math.max(0, pagination.page - 2);
+    const endPage = Math.min(pagination.totalPages - 1, pagination.page + 2);
+    
+    // 第一页
+    if (startPage > 0) {
+        pageNumbers.innerHTML += `
+            <button class="page-number" onclick="goToPage(0)">1</button>
+        `;
+        if (startPage > 1) {
+            pageNumbers.innerHTML += `<span style="color: white;">...</span>`;
+        }
+    }
+    
+    // 中间页码
+    for (let i = startPage; i <= endPage; i++) {
+        const isActive = i === pagination.page ? 'active' : '';
+        pageNumbers.innerHTML += `
+            <button class="page-number ${isActive}" onclick="goToPage(${i})">${i + 1}</button>
+        `;
+    }
+    
+    // 最后一页
+    if (endPage < pagination.totalPages - 1) {
+        if (endPage < pagination.totalPages - 2) {
+            pageNumbers.innerHTML += `<span style="color: white;">...</span>`;
+        }
+        pageNumbers.innerHTML += `
+            <button class="page-number" onclick="goToPage(${pagination.totalPages - 1})">${pagination.totalPages}</button>
+        `;
+    }
+}
+
+// 跳转到指定页
+function goToPage(page) {
+    if (page < 0 || page >= totalPages) return;
+    currentPage = page;
+    loadResults(page);
+    
+    // 滚动到结果区域
+    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+// 刷新结果列表
+function refreshResults() {
+    loadResults(currentPage);
+    showNotification('结果列表已刷新', 'success');
+}
+
+// 格式化日期时间
+function formatDateTime(dateTimeStr) {
+    if (!dateTimeStr) return '未知';
+    
+    const date = new Date(dateTimeStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return '刚刚';
+    if (diffMins < 60) return `${diffMins}分钟前`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}小时前`;
+    
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${month}-${day} ${hours}:${minutes}`;
+}
+
+// 页面加载时加载结果
+document.addEventListener('DOMContentLoaded', () => {
+    loadResults(0);
+});
+
+// ============ 结果汇总功能 ============
+
+// 汇总批量文件夹的翻译结果
+async function collectBatchFolderResults() {
+    try {
+        // 获取批量文件夹列表
+        showNotification('正在加载批量文件夹列表...', 'info');
+        
+        const response = await fetch(`${API_BASE}/api/upload/batch-folders`);
+        const result = await response.json();
+        
+        if (!result.success || !result.folders || result.folders.length === 0) {
+            showNotification('没有找到批量文件夹', 'warning');
+            return;
+        }
+        
+        // 创建选择对话框
+        const folderList = result.folders.map((folder, index) => 
+            `${index + 1}. ${folder.name} (${folder.sessionCount} 个会话)`
+        ).join('\n');
+        
+        const selectedIndex = prompt(
+            `请选择要汇总的批量文件夹（输入序号）：\n\n${folderList}`,
+            '1'
+        );
+        
+        if (!selectedIndex) {
+            return; // 用户取消
+        }
+        
+        const index = parseInt(selectedIndex) - 1;
+        if (index < 0 || index >= result.folders.length) {
+            showNotification('无效的选择', 'error');
+            return;
+        }
+        
+        const selectedFolder = result.folders[index];
+        
+        // 确认汇总
+        if (!confirm(`确认汇总批量文件夹 "${selectedFolder.name}" 吗？\n包含 ${selectedFolder.sessionCount} 个会话`)) {
+            return;
+        }
+        
+        // 执行汇总
+        showNotification('正在汇总批量文件夹...', 'info');
+        
+        const collectResponse = await fetch(`${API_BASE}/api/upload/collect-batch`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                batchFolderPath: selectedFolder.path
+            })
+        });
+        
+        const collectResult = await collectResponse.json();
+        
+        if (collectResult.success) {
+            const message = `✅ 批量汇总完成！\n📁 汇总路径: ${collectResult.collectionPath}\n📊 文件数量: ${collectResult.fileCount}`;
+            alert(message);
+            showNotification(collectResult.message, 'success');
+            
+            // 显示汇总目录位置
+            displayCollectionInfo(collectResult);
+        } else {
+            showNotification(collectResult.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('批量汇总失败:', error);
+        showNotification('批量汇总失败: ' + error.message, 'error');
+    }
+}
+
+// 汇总所有翻译结果
+async function collectAllResults() {
+    try {
+        // 显示确认对话框
+        if (!confirm('是否将所有已完成的翻译结果汇总到统一目录？')) {
+            return;
+        }
+        
+        showNotification('正在汇总结果...', 'info');
+        
+        const response = await fetch(`${API_BASE}/api/upload/collect-all`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const message = `✅ 汇总完成！\n📁 汇总路径: ${result.collectionPath}\n📊 文件数量: ${result.fileCount}`;
+            alert(message);
+            showNotification(result.message, 'success');
+            
+            // 显示汇总目录位置
+            displayCollectionInfo(result);
+        } else {
+            showNotification(result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('汇总失败:', error);
+        showNotification('汇总失败: ' + error.message, 'error');
+    }
+}
+
+// 汇总单个会话结果
+async function collectSessionResult(sessionId) {
+    try {
+        showNotification('正在汇总该会话结果...', 'info');
+        
+        const response = await fetch(`${API_BASE}/api/upload/collect/${sessionId}`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const message = `✅ 汇总完成！\n📁 汇总路径: ${result.collectionPath}\n📊 文件数量: ${result.fileCount}`;
+            alert(message);
+            showNotification(result.message, 'success');
+        } else {
+            showNotification(result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('汇总失败:', error);
+        showNotification('汇总失败: ' + error.message, 'error');
+    }
+}
+
+// 显示汇总信息
+function displayCollectionInfo(result) {
+    // 创建信息显示框
+    const infoBox = document.createElement('div');
+    infoBox.className = 'collection-info-box';
+    infoBox.innerHTML = `
+        <div class="collection-info-content">
+            <div class="collection-info-header">
+                <i class="fas fa-check-circle"></i>
+                <h3>汇总完成</h3>
+            </div>
+            <div class="collection-info-body">
+                <p><strong>汇总路径:</strong></p>
+                <p class="collection-path">${result.collectionPath}</p>
+                <p><strong>文件数量:</strong> ${result.fileCount} 个</p>
+                <p class="collection-tip">
+                    <i class="fas fa-info-circle"></i> 
+                    所有翻译结果已集中到上述目录，您可以在文件管理器中打开该目录查看所有文件。
+                </p>
+            </div>
+            <div class="collection-info-footer">
+                <button onclick="this.parentElement.parentElement.parentElement.remove()">
+                    关闭
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // 添加样式
+    const style = document.createElement('style');
+    style.textContent = `
+        .collection-info-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            max-width: 600px;
+            width: 90%;
+        }
+        
+        .collection-info-content {
+            padding: 30px;
+        }
+        
+        .collection-info-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            color: var(--success-color);
+        }
+        
+        .collection-info-header i {
+            font-size: 2rem;
+        }
+        
+        .collection-info-header h3 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .collection-info-body p {
+            margin: 12px 0;
+            line-height: 1.6;
+        }
+        
+        .collection-path {
+            background: var(--bg-color);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+            color: var(--primary-color);
+        }
+        
+        .collection-tip {
+            background: #e8f5e9;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid var(--success-color);
+            color: #2e7d32;
+            font-size: 0.9rem;
+        }
+        
+        .collection-info-footer {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        .collection-info-footer button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .collection-info-footer button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+    `;
+    
+    document.head.appendChild(style);
+    document.body.appendChild(infoBox);
+    
+    // 3秒后自动关闭
+    setTimeout(() => {
+        if (infoBox.parentElement) {
+            infoBox.remove();
+        }
+    }, 10000);
 }
 
 // 定期检查服务器状态
