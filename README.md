@@ -1,373 +1,242 @@
-# 漫画翻译工具 (Manga Translation Tool)
+# 🎨 MangaTrans - AI漫画翻译系统
 
-基于Spring Boot 3.5.10开发的智能漫画翻译系统，使用 **manga-ocr** 进行日文OCR识别，支持多个AI翻译引擎。
+[![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2+-green.svg)](https://spring.io/projects/spring-boot)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 🎯 项目特点
+一个基于深度学习的日语漫画自动翻译系统，支持文本检测、OCR识别、AI翻译和高质量渲染。
 
-- ✅ **无需登录** - 通过浏览器指纹识别用户
-- 🚀 **异步处理** - 支持大规模并发任务
-- 🤖 **manga-ocr** - 专业日文漫画OCR识别 ([kha-white/manga-ocr](https://github.com/kha-white/manga-ocr))
-- 🧠 **多引擎翻译** - 支持智谱AI、OpenAI GPT-4o、Claude 3.5、DeepSeek
-- 🎨 **智能渲染** - 自动字体选择和文本排版
-- 🌐 **可视化界面** - 拖拽上传、实时进度显示
-- 📦 **智能去重** - 基于MD5哈希的文件去重
-- 🔄 **实时进度** - WebSocket风格的进度查询
-- 💾 **历史管理** - 30天自动保留历史记录
+## ✨ 主要特性
 
-## 🏗️ 技术栈
+- 🔍 **智能文本检测** - 基于 [comic-text-detector](https://github.com/zyddnys/manga-image-translator/releases/tag/beta-0.3) 精准识别漫画文字区域
 
-- **框架**: Spring Boot 3.5.10
-- **数据库**: MongoDB (会话和历史记录存储)
-- **缓存**: Redis (OCR和翻译结果缓存)
-- **图像处理**: Java 2D + imgscalr
-- **异步处理**: Spring @Async
-- **HTTP客户端**: WebClient (调用外部API)
-- **构建工具**: Gradle
-
-## 📋 前置要求
-
-1. **Java 17+**
-2. **MongoDB 4.4+** (本地或远程)
-3. **Redis 6.0+**
-4. **manga_ocr服务** (Python微服务，需单独部署)
-5. **API密钥**:
-   - OpenAI API Key (可选)
-   - Claude API Key (可选)
-   - DeepSeek API Key (可选)
+- 📝 **OCR识别** - 使用 [manga-ocr](https://github.com/kha-white/manga-ocr) 高精度日语识别
+- 🌐 **AI翻译** - 集成智谱AI GLM-4.5，提供专业日译中翻译
+- 🎨 **高质量渲染** - 20pt固定字体，自动多列竖排布局，完美适配原图
+- ⚡ **异步处理** - 后端异步任务处理，支持批量翻译
+- 📱 **现代化UI** - 响应式Web界面，拖拽上传，实时进度显示
 
 ## 🚀 快速开始
 
-### 1. 克隆项目
+### 环境要求
+
+- **后端**: Java 17+, Gradle 7.5+
+- **前端**: 现代浏览器（Chrome/Firefox/Edge）
+- **Python**: Python 3.8+, PyTorch 2.0+
+- **数据库**: MongoDB 4.4+
+
+### 安装步骤
+
+#### 1. 克隆仓库
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/你的用户名/mangaTrans.git
 cd mangaTrans
 ```
 
-### 2. 配置环境变量
-
-编辑 `src/main/resources/application.properties`:
-
-```properties
-# MongoDB配置
-spring.data.mongodb.uri=mongodb://localhost:27017/manga_translation
-
-# Redis配置
-spring.data.redis.host=localhost
-spring.data.redis.port=6379
-
-# OCR服务地址
-ocr.service.url=http://localhost:5000
-
-# 翻译API密钥
-translation.openai.api-key=your-openai-key
-translation.claude.api-key=your-claude-key
-translation.deepseek.api-key=your-deepseek-key
-```
-
-或者使用环境变量：
+#### 2. 安装Python依赖
 
 ```bash
-export OPENAI_API_KEY=your-openai-key
-export CLAUDE_API_KEY=your-claude-key
-export DEEPSEEK_API_KEY=your-deepseek-key
+# 创建虚拟环境（推荐）
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 安装依赖
+pip install torch torchvision manga-ocr Pillow requests opencv-python
 ```
 
-### 3. 启动MongoDB和Redis
+#### 3. 下载模型文件
 
 ```bash
-# MongoDB
-docker run -d -p 27017:27017 --name mongodb mongo:latest
+# 下载 comic-text-detector 模型（约900MB）
+# 从 https://github.com/dmMaze/comic-text-detector/releases 下载
+# 或使用命令：
+curl -L -o comictextdetector.pt https://github.com/dmMaze/comic-text-detector/releases/download/v1.0/comictextdetector.pt
 
-# Redis
-docker run -d -p 6379:6379 --name redis redis:latest
+# manga-ocr 模型会在首次运行时自动下载
 ```
 
-### 4. 部署manga_ocr服务
-
-需要单独部署Python OCR服务。参考OCR服务文档。
-
-### 5. 构建并运行
+#### 4. 配置后端
 
 ```bash
-# 使用Gradle构建
-./gradlew build
+# 编辑 src/main/resources/application.properties
+# 配置 MongoDB 连接和智谱AI API密钥
+spring.data.mongodb.uri=mongodb://localhost:27017/manga_trans
+zhipu.api.key=你的智谱AI密钥
+```
 
-# 运行应用
+#### 5. 启动服务
+
+```bash
+# 启动MongoDB（如果未运行）
+mongod --dbpath /path/to/db
+
+# 启动Spring Boot后端
 ./gradlew bootRun
+
+# 访问前端
+# 浏览器打开: http://localhost:8080/manga.html
 ```
 
-应用将在 `http://localhost:8080` 启动。
+## 📖 使用指南
 
-## 📡 API接口文档
+### Web界面使用
 
-### 1. 上传文件并开始翻译
+1. **上传图片**
+   - 访问 `http://localhost:8080/manga.html`
+   - 拖拽或点击上传日语漫画图片（支持 JPG/PNG，最大10MB）
 
-**POST** `/api/upload`
+2. **配置选项**
+   - 源语言：日语（默认）
+   - 目标语言：中文（默认）
+   - 翻译引擎：智谱AI
 
-**Content-Type**: `multipart/form-data`
+3. **开始翻译**
+   - 点击"开始翻译"按钮
+   - 实时查看进度：上传 → 检测 → OCR → 翻译 → 渲染
+   - 完成后点击"下载翻译结果"
 
-**请求参数**:
-- `file` (文件): PNG/JPG/ZIP格式，最大10MB
-- `engine` (字符串): 翻译引擎 (OPENAI/CLAUDE/DEEPSEEK)
-- `sourceLanguage` (字符串): 源语言 (默认: ja)
-- `targetLanguage` (字符串): 目标语言 (默认: zh)
-- `outputFormat` (字符串): 输出格式 (SINGLE_IMAGE/ZIP/PDF)
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "File uploaded successfully",
-  "data": {
-    "sessionId": "uuid-here",
-    "fileName": "manga.png",
-    "status": "UPLOAD",
-    "progress": 0,
-    "currentStage": null,
-    "errorMessage": null
-  }
-}
-```
-
-### 2. 查询任务进度
-
-**GET** `/api/tasks/{sessionId}/progress`
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Success",
-  "data": {
-    "sessionId": "uuid-here",
-    "fileName": "manga.png",
-    "status": "TRANSLATE",
-    "progress": 50,
-    "currentStage": "翻译进度: 5/10",
-    "errorMessage": null
-  }
-}
-```
-
-### 3. 获取任务详情
-
-**GET** `/api/tasks/{sessionId}`
-
-返回完整的会话信息，包括文本区域、翻译结果等。
-
-### 4. 获取历史记录
-
-**GET** `/api/history?page=0&size=10`
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Success",
-  "data": {
-    "content": [
-      {
-        "id": "history-id",
-        "fileName": "manga.png",
-        "fileSize": 1024000,
-        "engine": "OpenAI GPT-4o",
-        "sourceLanguage": "ja",
-        "targetLanguage": "zh",
-        "accessCount": 3,
-        "createdAt": "2026-01-30T10:00:00",
-        "expiresAt": "2026-02-29T10:00:00"
-      }
-    ],
-    "totalPages": 5,
-    "totalElements": 50,
-    "number": 0,
-    "size": 10
-  }
-}
-```
-
-### 5. 下载结果文件
-
-**GET** `/api/history/{historyId}/download`
-
-返回翻译后的图片文件。
-
-### 6. 延长历史保留期
-
-**POST** `/api/history/{historyId}/extend?days=30`
-
-延长历史记录的保留期限。
-
-## 🔄 处理流程
-
-1. **文件上传** → 计算MD5哈希 → 检查去重 → 创建会话
-2. **图像预处理** → 标准化尺寸 → 转换格式
-3. **OCR识别** → 调用manga_ocr服务 → 提取文本区域
-4. **翻译** → 调用AI API → 更新术语表
-5. **渲染** → 根据语言选择字体 → 绘制译文
-6. **打包** → 添加水印 → 保存结果
-7. **存储** → 保存历史记录 → 设置过期时间
-
-## 📁 项目结构
-
-```
-src/main/java/com/example/mangaTrans/
-├── config/              # 配置类
-│   ├── AsyncConfig.java
-│   ├── RedisConfig.java
-│   ├── WebClientConfig.java
-│   └── WebConfig.java
-├── controller/          # 控制器
-│   ├── UploadController.java
-│   ├── TaskController.java
-│   └── HistoryController.java
-├── dto/                 # 数据传输对象
-│   ├── UploadRequest.java
-│   ├── SessionResponse.java
-│   ├── HistoryResponse.java
-│   └── ApiResponse.java
-├── entity/              # 实体类
-│   ├── TranslationSession.java
-│   └── TranslationHistory.java
-├── enums/               # 枚举
-│   ├── TaskStatus.java
-│   ├── TranslationEngine.java
-│   └── OutputFormat.java
-├── exception/           # 异常处理
-│   └── GlobalExceptionHandler.java
-├── model/               # 数据模型
-│   ├── TextRegion.java
-│   └── BoundingBox.java
-├── repository/          # 数据访问层
-│   ├── TranslationSessionRepository.java
-│   └── TranslationHistoryRepository.java
-├── scheduler/           # 定时任务
-│   └── CleanupScheduler.java
-├── service/             # 业务逻辑层
-│   ├── AsyncTaskService.java
-│   ├── FileStorageService.java
-│   ├── FingerprintService.java
-│   ├── HistoryService.java
-│   ├── ImageProcessingService.java
-│   ├── OcrService.java
-│   ├── SessionService.java
-│   └── TranslationService.java
-└── MangaTransApplication.java
-```
-
-## 🔧 配置说明
-
-### 文件存储
-
-默认存储路径: `./storage/{sessionId}/`
-
-目录结构:
-- `originals/` - 原始上传文件
-- `processed/` - 预处理后的文件
-- `results/` - 最终翻译结果
-
-### 缓存策略
-
-- **OCR结果**: Redis缓存24小时
-- **翻译结果**: Redis缓存7天
-- **临时文件**: 24小时后自动清理
-- **历史记录**: 30天后自动删除
-
-### 定时任务
-
-每天凌晨2点自动执行清理任务，删除：
-- 超过24小时的临时会话
-- 已过期的历史记录及其文件
-
-## 🎨 自定义配置
-
-### 修改翻译引擎
-
-在 `application.properties` 中:
-
-```properties
-translation.default-engine=openai  # 可选: openai, claude, deepseek
-```
-
-### 调整图像处理参数
-
-```properties
-image.max-width=2000
-image.max-height=2000
-image.output-format=png
-```
-
-### 启用/禁用水印
-
-```properties
-watermark.enabled=true
-watermark.text=AI Translated
-watermark.opacity=0.3
-```
-
-## 🧪 测试
+### Python命令行使用
 
 ```bash
-# 运行所有测试
-./gradlew test
+# 单张图片翻译
+python translate.py "input.jpg" "output.jpg"
 
-# 运行特定测试
-./gradlew test --tests "com.example.mangaTrans.service.SessionServiceTest"
+# 批量翻译（文件夹）
+python translate.py "manga_folder/" "translated_folder/"
+
+# 多张图片翻译
+python translate.py "001.jpg" "002.jpg" "003.jpg" --output "translated/"
 ```
 
-## 📊 监控和日志
+## 🏗️ 项目架构
 
-应用使用SLF4J+Logback记录日志。
-
-日志级别配置:
-```properties
-logging.level.root=INFO
-logging.level.com.example.mangaTrans=DEBUG
+```
+mangaTrans/
+├── src/main/java/              # Java后端代码
+│   ├── controller/             # REST API控制器
+│   ├── service/                # 业务逻辑层
+│   ├── model/                  # 数据模型
+│   └── config/                 # 配置类
+├── src/main/resources/
+│   ├── static/                 # 前端静态资源
+│   │   ├── manga.html          # 主界面
+│   │   ├── css/                # 样式文件
+│   │   └── js/                 # JavaScript
+│   └── application.properties  # 配置文件
+├── python_ocr_detector.py      # OCR检测模块
+├── render_translation.py       # 文本渲染模块
+├── translate_manga.py          # 完整翻译流程
+├── translate.py                # 命令行入口
+└── comictextdetector.pt        # 文本检测模型（需下载）
 ```
 
-## 🛠️ 故障排查
+## 🔧 核心技术
 
-### 问题1: MongoDB连接失败
-- 检查MongoDB是否正在运行
-- 验证连接字符串是否正确
+### 后端技术栈
+- **Spring Boot 3.2** - Web框架
+- **MongoDB** - 数据存储
+- **Gradle** - 构建工具
+- **RestTemplate** - HTTP客户端
 
-### 问题2: Redis连接失败
-- 检查Redis是否正在运行
-- 验证主机和端口配置
+### 前端技术栈
+- **HTML5/CSS3** - 界面结构
+- **Vanilla JavaScript** - 交互逻辑
+- **Fetch API** - 异步请求
 
-### 问题3: OCR服务调用失败
-- 确认manga_ocr服务已启动
-- 检查OCR服务URL配置
-- 查看OCR服务日志
+### AI模型
+- **comic-text-detector** - 漫画文本检测（YOLOv8架构）
+- **manga-ocr** - 日语OCR识别（Vision Transformer）
+- **智谱AI GLM-4.5** - 翻译大模型
 
-### 问题4: 翻译API调用失败
-- 验证API密钥是否正确
-- 检查API额度是否用尽
-- 确认网络连接正常
+## 📊 API文档
 
-## 📝 待实现功能
+### 上传并翻译
+```http
+POST /api/upload
+Content-Type: multipart/form-data
 
-- [ ] PDF输出支持
-- [ ] ZIP批量处理
-- [ ] WebSocket实时推送
-- [ ] 多语言界面
-- [ ] 术语库管理界面
-- [ ] 翻译质量评分
-- [ ] 用户反馈机制
+参数:
+- file: 图片文件（必需）
+- sourceLanguage: 源语言（可选，默认JA）
+- targetLanguage: 目标语言（可选，默认ZH）
+- engine: 翻译引擎（可选，默认ZHIPU）
 
-## 🤝 贡献
+返回:
+{
+  "success": true,
+  "sessionId": "uuid",
+  "message": "翻译任务已开始"
+}
+```
+
+### 查询进度
+```http
+GET /api/upload/status/{sessionId}
+
+返回:
+{
+  "sessionId": "uuid",
+  "status": "COMPLETED",
+  "progress": 100,
+  "message": "翻译完成",
+  "timestamp": "2026-01-31T00:00:00"
+}
+```
+
+### 下载结果
+```http
+GET /api/upload/download/{sessionId}
+
+返回: 翻译后的图片文件（application/octet-stream）
+```
+
+## 🎨 渲染特性
+
+- ✅ **固定字体大小** - 20pt微软雅黑，清晰易读
+- ✅ **智能多列布局** - 超长文本自动分列（从右到左）
+- ✅ **自动扩展文本框** - 确保所有文字完整显示
+- ✅ **竖排中文** - 符合日式漫画阅读习惯
+- ✅ **背景抹除** - 自动遮盖原始日文文本
+- ✅ **AI水印** - 标注为AI翻译作品
+
+## 🔮 roadmap
+
+- [ ] 支持更多翻译引擎（Google、DeepL、百度）
+- [ ] 批量处理优化（多线程并发）
+- [ ] 支持英文、韩文等其他语言
+- [ ] WebSocket实时进度推送
+- [ ] Docker容器化部署
+- [ ] GPU加速推理
+- [ ] 用户系统和历史记录
+- [ ] 自定义字体和样式
+
+## 🤝 贡献指南
 
 欢迎提交Issue和Pull Request！
 
-## 📄 许可证
+1. Fork本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启Pull Request
 
-MIT License
+## 📄 开源协议
 
-## 👥 联系方式
+本项目采用 [MIT License](LICENSE) 开源协议。
 
-如有问题，请通过GitHub Issues联系。
+## 🙏 致谢
+
+- [comic-text-detector](https://github.com/dmMaze/comic-text-detector) - 文本检测模型
+- [manga-ocr](https://github.com/kha-white/manga-ocr) - OCR识别引擎
+- [智谱AI](https://open.bigmodel.cn/) - 翻译服务提供商
+
+## 📧 联系方式
+
+- 项目地址: https://github.com/你的用户名/mangaTrans
+- 问题反馈: [Issues](https://github.com/你的用户名/mangaTrans/issues)
 
 ---
 
-**注意**: 本项目仅供学习和研究使用，请遵守相关API服务商的使用条款。
+**⚠️ 免责声明**: 本项目仅供学习交流使用，请勿用于商业用途。翻译作品版权归原作者所有。
