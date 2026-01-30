@@ -1,0 +1,151 @@
+{
+  "imageWidth": 960,
+  "imageHeight": 1378,
+  "regionsCount": 12,
+  "regions": [
+    {
+      "id": 1,
+      "boundingBox": {
+        "x": 794,
+        "y": 96,
+        "width": 67,
+        "height": 183
+      },
+      "area": 12261,
+      "vertical": true,
+      "fontSize": 31
+    },
+    {
+      "id": 2,
+      "boundingBox": {
+        "x": 506,
+        "y": 174,
+        "width": 18,
+        "height": 57
+      },
+      "area": 1026,
+      "vertical": true,
+      "fontSize": 18
+    },
+    {
+      "id": 3,
+      "boundingBox": {
+        "x": 273,
+        "y": 113,
+        "width": 66,
+        "height": 158
+      },
+      "area": 10428,
+      "vertical": true,
+      "fontSize": 30
+    },
+    {
+      "id": 4,
+      "boundingBox": {
+        "x": 157,
+        "y": 262,
+        "width": 73,
+        "height": 134
+      },
+      "area": 9782,
+      "vertical": true,
+      "fontSize": 30
+    },
+    {
+      "id": 5,
+      "boundingBox": {
+        "x": 724,
+        "y": 301,
+        "width": 39,
+        "height": 89
+      },
+      "area": 3471,
+      "vertical": true,
+      "fontSize": 31
+    },
+    {
+      "id": 6,
+      "boundingBox": {
+        "x": 774,
+        "y": 523,
+        "width": 63,
+        "height": 206
+      },
+      "area": 12978,
+      "vertical": true,
+      "fontSize": 25
+    },
+    {
+      "id": 7,
+      "boundingBox": {
+        "x": 640,
+        "y": 562,
+        "width": 96,
+        "height": 234
+      },
+      "area": 22464,
+      "vertical": true,
+      "fontSize": 25
+    },
+    {
+      "id": 8,
+      "boundingBox": {
+        "x": 784,
+        "y": 958,
+        "width": 29,
+        "height": 84
+      },
+      "area": 2436,
+      "vertical": true,
+      "fontSize": 27
+    },
+    {
+      "id": 9,
+      "boundingBox": {
+        "x": 364,
+        "y": 649,
+        "width": 117,
+        "height": 136
+      },
+      "area": 15912,
+      "vertical": true,
+      "fontSize": 33
+    },
+    {
+      "id": 10,
+      "boundingBox": {
+        "x": 142,
+        "y": 707,
+        "width": 21,
+        "height": 70
+      },
+      "area": 1470,
+      "vertical": true,
+      "fontSize": 21
+    },
+    {
+      "id": 11,
+      "boundingBox": {
+        "x": 640,
+        "y": 1071,
+        "width": 107,
+        "height": 219
+      },
+      "area": 23433,
+      "vertical": true,
+      "fontSize": 27
+    },
+    {
+      "id": 12,
+      "boundingBox": {
+        "x": 138,
+        "y": 1048,
+        "width": 164,
+        "height": 206
+      },
+      "area": 33784,
+      "vertical": true,
+      "fontSize": 32
+    }
+  ]
+}

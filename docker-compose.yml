@@ -1,0 +1,75 @@
+# Docker Compose配置
+
+version: '3.8'
+
+services:
+  # MongoDB服务
+  mongodb:
+    image: mongo:7.0
+    container_name: manga-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: manga_translation
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - manga-network
+
+  # Redis服务
+  redis:
+    image: redis:7.2-alpine
+    container_name: manga-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - manga-network
+
+  # manga_ocr服务 (需要先构建镜像)
+  ocr-service:
+    build:
+      context: ./ocr-service
+      dockerfile: Dockerfile
+    container_name: manga-ocr
+    ports:
+      - "5000:5000"
+    networks:
+      - manga-network
+    depends_on:
+      - mongodb
+      - redis
+
+  # Spring Boot应用 (可选，也可以在本地运行)
+  manga-trans-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: manga-trans-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/manga_translation
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      OCR_SERVICE_URL: http://ocr-service:5000
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+    volumes:
+      - ./storage:/app/storage
+    networks:
+      - manga-network
+    depends_on:
+      - mongodb
+      - redis
+      - ocr-service
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  manga-network:
+    driver: bridge
