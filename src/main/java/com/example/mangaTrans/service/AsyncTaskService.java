@@ -84,28 +84,42 @@ public class AsyncTaskService {
                     output.append(line).append("\n");
                     log.info("Python: {}", line);
                     
-                    // 根据输出更新进度
-                    if (line.contains("检测文本区域") || line.contains("Detecting")) {
-                        sessionService.updateSessionProgress(sessionId, TaskStatus.PREPROCESS, 40, "检测文本区域");
-                    } else if (line.contains("识别文本") || line.contains("OCR")) {
-                        sessionService.updateSessionProgress(sessionId, TaskStatus.OCR, 55, "识别文本");
-                    } else if (line.contains("翻译") || line.contains("Translat")) {
-                        sessionService.updateSessionProgress(sessionId, TaskStatus.TRANSLATE, 70, "翻译中");
-                    } else if (line.contains("渲染") || line.contains("替换") || line.contains("Render")) {
-                        sessionService.updateSessionProgress(sessionId, TaskStatus.RENDER, 85, "渲染译文");
+                    // 根据输出更新进度 - 更细粒度的进度追踪
+                    if (line.contains("检测文本区域") || line.contains("Detecting") || line.contains("detect")) {
+                        sessionService.updateSessionProgress(sessionId, TaskStatus.PREPROCESS, 35, "检测文本区域");
+                    } else if (line.contains("文本区域检测完成") || line.contains("Detection complete")) {
+                        sessionService.updateSessionProgress(sessionId, TaskStatus.PREPROCESS, 45, "文本区域检测完成");
+                    } else if (line.contains("识别文本") || line.contains("OCR") || line.contains("recogniz")) {
+                        sessionService.updateSessionProgress(sessionId, TaskStatus.OCR, 55, "识别文本中");
+                    } else if (line.contains("文本识别完成") || line.contains("OCR complete")) {
+                        sessionService.updateSessionProgress(sessionId, TaskStatus.OCR, 65, "文本识别完成");
+                    } else if (line.contains("翻译") || line.contains("Translat") || line.contains("translat")) {
+                        sessionService.updateSessionProgress(sessionId, TaskStatus.TRANSLATE, 75, "翻译文本中");
+                    } else if (line.contains("翻译完成") || line.contains("Translation complete")) {
+                        sessionService.updateSessionProgress(sessionId, TaskStatus.TRANSLATE, 82, "翻译完成");
+                    } else if (line.contains("渲染") || line.contains("替换") || line.contains("Render") || line.contains("render") || line.contains("inpaint")) {
+                        sessionService.updateSessionProgress(sessionId, TaskStatus.RENDER, 88, "渲染译文中");
+                    } else if (line.contains("保存") || line.contains("Saving") || line.contains("save") || line.contains("完成")) {
+                        sessionService.updateSessionProgress(sessionId, TaskStatus.RENDER, 95, "保存结果中");
                     }
                 }
             }
+            
+            log.info("Python process output reading completed, waiting for process to finish...");
+            sessionService.updateSessionProgress(sessionId, TaskStatus.PACKAGE, 97, "等待Python进程完成");
             
             // 等待完成（最多5分钟）
             boolean finished = process.waitFor(300, java.util.concurrent.TimeUnit.SECONDS);
             
             if (!finished) {
                 process.destroy();
+                sessionService.updateSessionProgress(sessionId, TaskStatus.FAILED, 0, "翻译超时");
                 throw new RuntimeException("Python translation timeout (300s)");
             }
             
             int exitCode = process.exitValue();
+            log.info("Python process finished with exit code: {}", exitCode);
+            sessionService.updateSessionProgress(sessionId, TaskStatus.PACKAGE, 98, "验证结果");
             
             if (exitCode != 0) {
                 log.error("Python translation failed with exit code: {}", exitCode);
@@ -115,14 +129,20 @@ public class AsyncTaskService {
             
             // 3. 验证输出文件
             if (!outputFile.exists()) {
+                sessionService.updateSessionProgress(sessionId, TaskStatus.FAILED, 0, "输出文件未找到");
                 throw new RuntimeException("Output file not found: " + outputPath);
             }
             
             log.info("Python translation completed: {}", outputPath);
+            sessionService.updateSessionProgress(sessionId, TaskStatus.PACKAGE, 99, "最终确认");
             
-            // 4. 完成
-            sessionService.updateSessionProgress(sessionId, TaskStatus.COMPLETED, 100, "翻译完成");
+            // 4. 设置结果路径并保存
             session.setResultPath(outputPath);
+            session = sessionService.saveSession(session);
+            log.info("Saved result path to session: {}", outputPath);
+            
+            // 5. 更新为完成状态
+            sessionService.updateSessionProgress(sessionId, TaskStatus.COMPLETED, 100, "翻译完成");
             
             // 保存到历史记录
             historyService.createHistory(session);

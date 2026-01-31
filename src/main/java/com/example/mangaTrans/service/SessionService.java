@@ -31,17 +31,20 @@ public class SessionService {
     /**
      * 创建新的翻译会话
      * @param isBatch 是否为批量上传（多张图片）
+     * @param batchId 批次ID（同一批次使用相同ID）
      */
-    public TranslationSession createSession(MultipartFile file, String userFingerprint, boolean isBatch) throws IOException {
-        // 计算文件MD5哈希
+    public TranslationSession createSession(MultipartFile file, String userFingerprint, boolean isBatch, String batchId) throws IOException {
+        // 计算文件MD5哈希（用于记录，不用于去重）
         String fileHash = calculateFileHash(file.getInputStream());
         
-        // 检查是否已存在相同文件的会话（去重）
-        Optional<TranslationSession> existingSession = sessionRepository.findByFileHash(fileHash);
-        if (existingSession.isPresent()) {
-            log.info("Found existing session for file hash: {}", fileHash);
-            return existingSession.get();
-        }
+        // 注释掉去重逻辑：用户希望每次上传都创建新任务
+        // Optional<TranslationSession> existingSession = sessionRepository.findByFileHash(fileHash);
+        // if (existingSession.isPresent()) {
+        //     log.info("Found existing session for file hash: {}", fileHash);
+        //     return existingSession.get();
+        // }
+        
+        log.info("Creating new session for file hash: {} (no deduplication)", fileHash);
         
         // 创建新会话
         TranslationSession session = new TranslationSession();
@@ -54,8 +57,8 @@ public class SessionService {
         session.setStatus(TaskStatus.UPLOAD);
         session.setProgress(0);
         
-        // 创建会话专用目录（根据isBatch决定是否创建父文件夹）
-        String sessionDirectory = fileStorageService.createSessionDirectory(session.getId(), isBatch);
+        // 创建会话专用目录（根据isBatch和batchId决定是否创建父文件夹）
+        String sessionDirectory = fileStorageService.createSessionDirectory(session.getId(), isBatch, batchId);
         session.setSessionDirectory(sessionDirectory);
         session.setOriginalFileDirectory(new java.io.File(sessionDirectory).getParent()); // 存储原始文件所在父目录
         

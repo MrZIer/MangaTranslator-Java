@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>测试图片显示</title>
+    <link rel="stylesheet" href="css/gallery.css?v=2.0">
+    <style>
+        body { padding: 20px; background: #f8fafc; }
+        .test-container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>测试图片垂直展示</h1>
+        <div id="images-container"></div>
+    </div>
+
+    <script>
+        // 直接测试图片加载和显示
+        async function loadImages() {
+            const container = document.getElementById('images-container');
+            container.innerHTML = '<p>加载中...</p>';
+            
+            try {
+                const response = await fetch('/api/gallery/images?folderPath=batch_20260131_182643/session_20260131_182643_7509ee23');
+                const result = await response.json();
+                
+                console.log('API返回:', result);
+                
+                if (result.success && result.data && result.data.images) {
+                    container.innerHTML = '<p style="color: green;">成功获取 ' + result.data.images.length + ' 张图片</p>';
+                    
+                    result.data.images.forEach((image, index) => {
+                        const imageUrl = `/api/gallery/view?folderPath=${encodeURIComponent(result.data.folderPath)}&filename=${encodeURIComponent(image.filename)}`;
+                        
+                        // 创建图片卡片
+                        const card = document.createElement('div');
+                        card.className = 'image-card';
+                        card.innerHTML = `
+                            <div class="image-card-header">
+                                <div class="image-card-title">
+                                    <i class="fas fa-image"></i>
+                                    <span>${image.filename}</span>
+                                </div>
+                            </div>
+                            <div class="image-card-body">
+                                <img src="${imageUrl}" alt="${image.filename}" class="full-width-image" 
+                                     onload="console.log('图片加载成功: ${image.filename}')"
+                                     onerror="console.error('图片加载失败: ${image.filename}')">
+                            </div>
+                            <div class="image-card-footer">
+                                <span class="image-meta">
+                                    <i class="fas fa-info-circle"></i> 大小: ${formatSize(image.size)}
+                                </span>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+                } else {
+                    container.innerHTML = '<p style="color: red;">未获取到图片数据</p>';
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                container.innerHTML = '<p style="color: red;">加载失败: ' + error.message + '</p>';
+            }
+        }
+        
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+        
+        // 页面加载时执行
+        loadImages();
+    </script>
+</body>
+</html>

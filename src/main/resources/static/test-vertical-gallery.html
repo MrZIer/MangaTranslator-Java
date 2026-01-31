@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试 - 垂直图片展示</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #f8fafc;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .folder-select {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 250px;
+        }
+
+        .folder-select:hover {
+            border-color: #4f46e5;
+        }
+
+        .folder-select:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            color: #64748b;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-message.success {
+            color: #10b981;
+        }
+
+        .status-message.error {
+            color: #ef4444;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        /* 图片卡片样式 */
+        .image-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+
+        .image-card:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-card-header {
+            padding: 15px 20px;
+            background: linear-gradient(to right, #f8fafc, #f1f5f9);
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .image-card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .image-card-title i {
+            color: #4f46e5;
+        }
+
+        .image-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-icon:hover {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .image-card-body {
+            padding: 20px;
+            background: #f8fafc;
+            display: flex;
+            justify-content: center;
+        }
+
+        .full-width-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .full-width-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-card-footer {
+            padding: 12px 20px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .image-meta {
+            color: #64748b;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .image-meta i {
+            color: #4f46e5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading i {
+            font-size: 32px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-images"></i> 垂直图片展示测试</h1>
+        <p class="subtitle">测试多张图片垂直排列效果 - 每张图片占据一行，直接显示无需点击</p>
+
+        <div class="controls">
+            <select id="folderSelect" class="folder-select">
+                <option value="">-- 选择批量文件夹 --</option>
+            </select>
+            <button id="collectBtn" class="btn-primary" onclick="collectAndDisplay()" disabled>
+                <i class="fas fa-folder-plus"></i> 收集并展示图片
+            </button>
+            <span id="statusMessage" class="status-message"></span>
+        </div>
+
+        <div id="images-container">
+            <div class="loading">
+                <i class="fas fa-info-circle"></i>
+                <p>点击"收集并展示图片"按钮开始</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let collectedFolderName = null;
+
+        // 页面加载时获取所有batch文件夹
+        window.onload = async function() {
+            await loadBatchFolders();
+        };
+
+        // 加载所有batch文件夹
+        async function loadBatchFolders() {
+            const folderSelect = document.getElementById('folderSelect');
+            
+            try {
+                const response = await fetch('/api/gallery/batch-folders');
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    folderSelect.innerHTML = '<option value="">-- 选择批量文件夹 --</option>';
+                    
+                    result.data.forEach(folder => {
+                        const option = document.createElement('option');
+                        option.value = folder.path;
+                        option.textContent = `${folder.name} (${folder.sessionCount || 0} 个会话)`;
+                        folderSelect.appendChild(option);
+                    });
+                    
+                    // 监听选择变化
+                    folderSelect.addEventListener('change', function() {
+                        const collectBtn = document.getElementById('collectBtn');
+                        collectBtn.disabled = !this.value;
+                    });
+                } else {
+                    folderSelect.innerHTML = '<option value="">-- 暂无批量文件夹 --</option>';
+                }
+            } catch (error) {
+                console.error('加载文件夹失败:', error);
+                folderSelect.innerHTML = '<option value="">-- 加载失败 --</option>';
+            }
+        }
+
+        // 收集并展示图片
+        async function collectAndDisplay() {
+            const folderSelect = document.getElementById('folderSelect');
+            const selectedFolder = folderSelect.value;
+            
+            if (!selectedFolder) {
+                alert('请先选择一个批量文件夹');
+                return;
+            }
+
+            const collectBtn = document.getElementById('collectBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            const container = document.getElementById('images-container');
+
+            try {
+                // 禁用按钮
+                collectBtn.disabled = true;
+                folderSelect.disabled = true;
+                statusMessage.className = 'status-message';
+                statusMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在收集图片...';
+
+                container.innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>正在从所有session收集图片...</p>
+                    </div>
+                `;
+
+                // 步骤1: 调用收集API
+                console.log('调用收集API...');
+                const collectResponse = await fetch('/api/upload/collect-batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        batchFolderPath: `storage/${selectedFolder}`
+                    })
+                });
+
+                const collectResult = await collectResponse.json();
+                console.log('收集结果:', collectResult);
+
+                if (!collectResult.success) {
+                    throw new Error(collectResult.message || '收集失败');
+                }
+
+                collectedFolderName = collectResult.collectionPath;
+                const collectedCount = collectResult.collectedCount || 0;
+
+                statusMessage.className = 'status-message success';
+                statusMessage.innerHTML = `<i class="fas fa-check-circle"></i> 成功收集 ${collectedCount} 张图片到 ${collectedFolderName}`;
+
+                // 步骤2: 加载收集后的图片
+                await loadCollectedImages(collectedFolderName);
+
+            } catch (error) {
+                console.error('操作失败:', error);
+                statusMessage.className = 'status-message error';
+                statusMessage.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${error.message}`;
+                
+                container.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>操作失败: ${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                collectBtn.disabled = false;
+                folderSelect.disabled = false;
+            }
+        }
+
+        // 加载收集后的图片
+        async function loadCollectedImages(folderName) {
+            const container = document.getElementById('images-container');
+
+            try {
+                console.log(`加载收集文件夹 ${folderName} 的图片...`);
+                
+                const imagesResponse = await fetch(`/api/gallery/images?folderPath=${encodeURIComponent(folderName)}`);
+                const imagesResult = await imagesResponse.json();
+
+                console.log('图片数据:', imagesResult);
+
+                if (!imagesResult.success || !imagesResult.data || !imagesResult.data.images || imagesResult.data.images.length === 0) {
+                    container.innerHTML = `
+                        <div class="error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>收集文件夹中没有找到图片</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 清空容器
+                container.innerHTML = '';
+
+                // 为每张图片创建卡片
+                imagesResult.data.images.forEach((image, index) => {
+                    const imageUrl = `/api/gallery/view?folderPath=${encodeURIComponent(imagesResult.data.folderPath)}&filename=${encodeURIComponent(image.filename)}`;
+                    const downloadUrl = `/api/gallery/download?folderPath=${encodeURIComponent(imagesResult.data.folderPath)}&filename=${encodeURIComponent(image.filename)}`;
+
+                    const card = createImageCard(image, imageUrl, downloadUrl, index + 1, folderName);
+                    container.appendChild(card);
+                });
+
+                console.log(`成功显示 ${imagesResult.data.images.length} 张图片`);
+
+            } catch (error) {
+                console.error('加载图片失败:', error);
+                container.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>加载图片失败: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 自动加载图片（原有功能，现在注释掉）
+        async function loadImages() {
+            const container = document.getElementById('images-container');
+            const batchFolder = 'batch_20260131_182643'; // 父文件夹
+            
+            try {
+                // 第一步：获取batch文件夹下的所有session
+                console.log('正在获取batch文件夹的所有session...');
+                const sessionsResponse = await fetch(`/api/gallery/batch-folders/${encodeURIComponent(batchFolder)}/sessions`);
+                const sessionsResult = await sessionsResponse.json();
+                
+                console.log('获取到的sessions:', sessionsResult);
+                
+                if (!sessionsResult.success || !sessionsResult.data || sessionsResult.data.length === 0) {
+                    container.innerHTML = `
+                        <div class="error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>未找到任何session文件夹</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 清空容器
+                container.innerHTML = '';
+                
+                let totalImageCount = 0;
+                
+                // 第二步：遍历每个session，获取其中的所有图片
+                for (const session of sessionsResult.data) {
+                    console.log(`正在加载 ${session.path} 的图片...`);
+                    
+                    try {
+                        const imagesResponse = await fetch(`/api/gallery/images?folderPath=${encodeURIComponent(session.path)}`);
+                        const imagesResult = await imagesResponse.json();
+                        
+                        if (imagesResult.success && imagesResult.data && imagesResult.data.images && imagesResult.data.images.length > 0) {
+                            // 为每张图片创建卡片
+                            imagesResult.data.images.forEach((image) => {
+                                totalImageCount++;
+                                const imageUrl = `/api/gallery/view?folderPath=${encodeURIComponent(imagesResult.data.folderPath)}&filename=${encodeURIComponent(image.filename)}`;
+                                const downloadUrl = `/api/gallery/download?folderPath=${encodeURIComponent(imagesResult.data.folderPath)}&filename=${encodeURIComponent(image.filename)}`;
+                                
+                                const card = createImageCard(image, imageUrl, downloadUrl, totalImageCount, session.path);
+                                container.appendChild(card);
+                            });
+                            
+                            console.log(`${session.path} 加载了 ${imagesResult.data.images.length} 张图片`);
+                        }
+                    } catch (error) {
+                        console.error(`加载 ${session.path} 失败:`, error);
+                    }
+                }
+                
+                if (totalImageCount === 0) {
+                    container.innerHTML = `
+                        <div class="error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>所有session中都没有找到图片</p>
+                        </div>
+                    `;
+                } else {
+                    console.log(`总共显示 ${totalImageCount} 张图片`);
+                }
+                
+            } catch (error) {
+                console.error('加载失败:', error);
+                container.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>加载失败: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 创建图片卡片
+        function createImageCard(image, imageUrl, downloadUrl, number, sessionPath) {
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            
+            card.innerHTML = `
+                <div class="image-card-header">
+                    <div class="image-card-title">
+                        <i class="fas fa-image"></i>
+                        <span>#${number} - ${sessionPath}/${image.filename}</span>
+                    </div>
+                    <div class="image-card-actions">
+                        <button class="btn-icon" onclick="window.open('${imageUrl}', '_blank')" title="新窗口打开">
+                            <i class="fas fa-external-link-alt"></i> 打开
+                        </button>
+                        <button class="btn-icon" onclick="window.location.href='${downloadUrl}'" title="下载图片">
+                            <i class="fas fa-download"></i> 下载
+                        </button>
+                    </div>
+                </div>
+                <div class="image-card-body">
+                    <img src="${imageUrl}" alt="${image.filename}" class="full-width-image" 
+                         onclick="window.open('${imageUrl}', '_blank')"
+                         onload="console.log('图片${number}加载成功: ${image.filename}')"
+                         onerror="console.error('图片${number}加载失败: ${image.filename}')">
+                </div>
+                <div class="image-card-footer">
+                    <span class="image-meta">
+                        <i class="fas fa-info-circle"></i> 
+                        大小: ${formatFileSize(image.size)}
+                    </span>
+                    <span class="image-meta">
+                        <i class="fas fa-clock"></i>
+                        修改时间: ${new Date(image.modifiedTime).toLocaleString('zh-CN')}
+                    </span>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 页面加载时不再自动执行，改为手动点击按钮
+        // window.onload = loadImages;
+    </script>
+</body>
+</html>

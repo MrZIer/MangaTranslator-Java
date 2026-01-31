@@ -5,6 +5,13 @@ const API_BASE = window.location.origin;
 let currentTasks = new Map();
 let pollingIntervals = new Map();
 
+// 生成批次ID（用于同一批次的多个文件）
+function generateBatchId() {
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
+    const random = Math.random().toString(36).substring(2, 10);
+    return `batch_${timestamp}_${random}`;
+}
+
 // DOM元素
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
@@ -21,6 +28,7 @@ const progressDetail = document.getElementById('progressDetail');
 document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
     loadHistory();
+    loadResults(0); // 加载翻译结果浏览
     checkServerStatus();
 });
 
@@ -97,8 +105,10 @@ async function startTranslation() {
     
     try {
         const isBatch = files.length > 1; // 判断是否为批量上传
+        const batchId = isBatch ? generateBatchId() : null; // 生成批次ID
+        
         for (const file of files) {
-            await uploadFile(file, sourceLanguage, targetLanguage, engine, outputFormat, isBatch);
+            await uploadFile(file, sourceLanguage, targetLanguage, engine, outputFormat, isBatch, batchId);
         }
         
         // 重置表单
@@ -119,7 +129,7 @@ async function startTranslation() {
 }
 
 // 上传文件
-async function uploadFile(file, sourceLanguage, targetLanguage, engine, outputFormat, isBatch = false) {
+async function uploadFile(file, sourceLanguage, targetLanguage, engine, outputFormat, isBatch = false, batchId = null) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('sourceLanguage', sourceLanguage);
@@ -127,6 +137,9 @@ async function uploadFile(file, sourceLanguage, targetLanguage, engine, outputFo
     formData.append('engine', engine);
     formData.append('outputFormat', outputFormat);
     formData.append('isBatch', isBatch); // 传递批量标识
+    if (batchId) {
+        formData.append('batchId', batchId); // 传递批次ID
+    }
     
     const response = await fetch(`${API_BASE}/api/upload`, {
         method: 'POST',
@@ -186,6 +199,9 @@ function addTask(task) {
             <button class="btn-compare" onclick="showCompareView('${task.sessionId}')" style="display:none">
                 <i class="fas fa-columns"></i> 对比
             </button>
+            <button class="btn-view-gallery" onclick="viewInGallery('${task.sessionId}')" style="display:none">
+                <i class="fas fa-images"></i> 查看结果
+            </button>
             <button class="btn-download" disabled>
                 <i class="fas fa-download"></i> 下载
             </button>
@@ -200,6 +216,8 @@ function addTask(task) {
 
 // 开始轮询任务进度
 function startPolling(sessionId) {
+    console.log(`[${sessionId}] 开始轮询任务进度...`);
+    
     const interval = setInterval(async () => {
         try {
             const response = await fetch(`${API_BASE}/api/tasks/${sessionId}/progress`);
@@ -208,15 +226,21 @@ function startPolling(sessionId) {
             if (result.success) {
                 updateTaskProgress(sessionId, result.data);
                 
-                // 如果任务完成或失败，停止轮询
-                if (result.data.status === 'COMPLETED' || result.data.status === 'FAILED') {
+                // 只有在真正完成或失败时才停止轮询
+                if (result.data.status === 'COMPLETED' && result.data.progress === 100) {
+                    console.log(`[${sessionId}] 任务完成，停止轮询`);
+                    clearInterval(interval);
+                    pollingIntervals.delete(sessionId);
+                    loadHistory(); // 刷新历史记录
+                } else if (result.data.status === 'FAILED') {
+                    console.log(`[${sessionId}] 任务失败，停止轮询`);
                     clearInterval(interval);
                     pollingIntervals.delete(sessionId);
                     loadHistory(); // 刷新历史记录
                 }
             }
         } catch (error) {
-            console.error('轮询失败:', error);
+            console.error(`[${sessionId}] 轮询失败:`, error);
         }
     }, 2000); // 每2秒轮询一次
     
@@ -233,6 +257,9 @@ function updateTaskProgress(sessionId, progress) {
     const statusBadge = taskElement.querySelector('.task-status');
     const taskInfo = taskElement.querySelector('.task-info');
     const downloadBtn = taskElement.querySelector('.btn-download');
+    
+    // 记录进度更新（用于调试）
+    console.log(`[${sessionId}] 进度更新: ${progress.progress}% - ${progress.status} - ${progress.currentStage}`);
     
     // 更新进度条
     progressBar.style.width = `${progress.progress}%`;
@@ -261,8 +288,9 @@ function updateTaskProgress(sessionId, progress) {
         ${progress.errorMessage ? `<div style="color: var(--error-color);">错误: ${progress.errorMessage}</div>` : ''}
     `;
     
-    // 完成后启用下载按钮和对比按钮
-    if (progress.status === 'COMPLETED') {
+    // 只有真正完成时（status=COMPLETED 且 progress=100）才启用按钮
+    if (progress.status === 'COMPLETED' && progress.progress === 100) {
+        console.log(`[${sessionId}] 任务真正完成！启用按钮`);
         downloadBtn.disabled = false;
         downloadBtn.onclick = () => downloadResult(sessionId);
         
@@ -270,6 +298,23 @@ function updateTaskProgress(sessionId, progress) {
         const compareBtn = taskElement.querySelector('.btn-compare');
         if (compareBtn) {
             compareBtn.style.display = 'inline-flex';
+        }
+        
+        // 显示查看结果按钮
+        const viewGalleryBtn = taskElement.querySelector('.btn-view-gallery');
+        if (viewGalleryBtn) {
+            viewGalleryBtn.style.display = 'inline-flex';
+        }
+    } else {
+        // 未完成时确保按钮保持禁用
+        downloadBtn.disabled = true;
+        const compareBtn = taskElement.querySelector('.btn-compare');
+        if (compareBtn) {
+            compareBtn.style.display = 'none';
+        }
+        const viewGalleryBtn = taskElement.querySelector('.btn-view-gallery');
+        if (viewGalleryBtn) {
+            viewGalleryBtn.style.display = 'none';
         }
     }
 }
@@ -311,6 +356,25 @@ async function downloadResult(sessionId) {
         showNotification('下载已开始', 'success');
     } catch (error) {
         showNotification('下载失败: ' + error.message, 'error');
+    }
+}
+
+// 在图片库中查看结果
+async function viewInGallery(sessionId) {
+    try {
+        // 获取会话详情以获得会话目录路径
+        const response = await fetch(`${API_BASE}/api/tasks/${sessionId}`);
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.sessionDirectory) {
+            // 跳转到gallery页面并传递文件夹路径
+            window.open(`gallery.html?folder=${encodeURIComponent(result.data.sessionDirectory)}`, '_blank');
+        } else {
+            showNotification('无法获取会话目录信息', 'warning');
+        }
+    } catch (error) {
+        console.error('查看结果失败:', error);
+        showNotification('查看结果失败: ' + error.message, 'error');
     }
 }
 

@@ -47,7 +47,8 @@ public class UploadController {
             @RequestParam(value = "targetLanguage", defaultValue = "ZH") String targetLanguage,
             @RequestParam(value = "engine", defaultValue = "ZHIPU") String engineStr,
             @RequestParam(value = "outputFormat", defaultValue = "PNG") String formatStr,
-            @RequestParam(value = "isBatch", defaultValue = "false") boolean isBatch) {
+            @RequestParam(value = "isBatch", defaultValue = "false") boolean isBatch,
+            @RequestParam(value = "batchId", required = false) String batchId) {
 
         Map<String, Object> response = new HashMap<>();
 
@@ -63,51 +64,10 @@ public class UploadController {
             TranslationEngine engine = TranslationEngine.valueOf(engineStr.toUpperCase());
             OutputFormat outputFormat = OutputFormat.valueOf(formatStr.toUpperCase());
 
-            // 创建会话（如果文件已存在，会返回现有session）
-            TranslationSession session = sessionService.createSession(file, "default-user", isBatch);
+            // 创建新会话（每次上传都创建新任务，不再检查重复）
+            TranslationSession session = sessionService.createSession(file, "default-user", isBatch, batchId);
             
-            // 检查是否是已存在的session
-            boolean isExistingSession = session.getSessionDirectory() != null && session.getUploadPath() != null;
-            
-            if (isExistingSession) {
-                // 如果是已存在的session，检查状态
-                Map<String, Object> data = new HashMap<>();
-                data.put("sessionId", session.getId());
-                data.put("fileName", session.getOriginalFileName());
-                data.put("status", session.getStatus().name());
-                data.put("progress", session.getProgress());
-                
-                response.put("success", true);
-                response.put("data", data);
-                
-                if (session.getStatus() == TaskStatus.COMPLETED) {
-                    response.put("message", "该文件已翻译完成，直接返回结果");
-                    return ResponseEntity.ok(response);
-                } else if (session.getStatus() == TaskStatus.FAILED) {
-                    // 失败的任务，允许重新翻译
-                    response.put("message", "该文件之前翻译失败，正在重新翻译");
-                    
-                    // 重置状态并重新翻译
-                    session.setEngine(engine);
-                    session.setSourceLanguage(sourceLanguage);
-                    session.setTargetLanguage(targetLanguage);
-                    session.setOutputFormat(outputFormat);
-                    session.setStatus(TaskStatus.UPLOAD);
-                    session.setProgress(0);
-                    session.setErrorMessage(null);
-                    session = sessionService.saveSession(session);
-                    
-                    // 异步执行翻译任务
-                    asyncTaskService.processTranslationTask(session.getId(), engine, targetLanguage);
-                    return ResponseEntity.ok(response);
-                } else {
-                    // 正在处理中的任务
-                    response.put("message", "该文件正在翻译中，请稍候查看进度");
-                    return ResponseEntity.ok(response);
-                }
-            }
-            
-            // 新session：设置翻译参数
+            // 设置翻译参数
             session.setEngine(engine);
             session.setSourceLanguage(sourceLanguage);
             session.setTargetLanguage(targetLanguage);

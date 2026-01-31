@@ -6,7 +6,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-4.4+-green.svg)](https://www.mongodb.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> 🚀 一个基于深度学习的全自动漫画翻译系统，支持智能文本检测、OCR识别、多引擎AI翻译和专业级渲染。采用现代化微服务架构，提供Web界面和批量处理能力。
+> 🚀 一个基于深度学习的全自动漫画翻译系统，支持智能文本检测、OCR识别、多引擎AI翻译和专业级渲染。采用现代化微服务架构，提供Web界面和批量处理能力，支持翻译结果可视化展示。
 
 ---
 
@@ -14,29 +14,32 @@
 
 ### 🎯 智能化处理
 - **🔍 精准文本检测** - 基于 comic-text-detector 深度学习模型，准确识别漫画气泡和文字区域
-- **📝 高精度OCR** - 集成 manga-ocr，专门针对日语漫画优化，识别准确率高
-- **🤖 多引擎翻译** - 支持智谱清言、OpenAI GPT-4、Claude、DeepSeek等多个AI翻译引擎
+- **📝 高精度OCR** - 集成 manga-ocr，专门针对日语漫画优化，识别准确率高达95%+
+- **🤖 多引擎翻译** - 支持智谱清言（GLM-4）、OpenAI GPT-4、Claude、DeepSeek等多个AI翻译引擎
 - **🎨 专业级渲染** - 智能文本布局，自动多列竖排，完美融入原画风格
+- **🖼️ 对比预览** - 原图与翻译结果并排对比，直观展示翻译效果
 
 ### 🏗️ 先进架构
 - **📦 标准化存储** - 分层目录结构（original/processed/ocr/translated），清晰可追溯
-- **🔄 批量智能识别** - 前端自动判断单张/批量上传，创建对应目录结构
+- **🔄 智能批次管理** - 前端自动生成批次ID，19张图片统一归入单个batch文件夹
 - **⚡ 异步任务处理** - Spring Boot异步架构，支持并发处理多个翻译任务
 - **💾 会话持久化** - MongoDB存储会话信息，支持断点续传和历史查询
-- **🔐 文件去重** - 基于MD5哈希的智能去重，避免重复翻译相同图片
+- **🎯 实时进度追踪** - 15个进度检查点，从0%到100%精确显示任务状态
 
 ### 📱 用户体验
-- **🎭 现代化UI** - 响应式设计，支持拖拽上传，实时进度显示
-- **📊 分页浏览** - 翻译结果分页展示，支持按会话筛选
+- **🎭 现代化UI** - 响应式设计，支持拖拽上传，Material Design风格
+- **📊 图片库管理** - 支持批量文件夹、单个会话、收集文件夹三种浏览模式
+- **🖼️ 垂直瀑布展示** - 收集并展示功能，一键汇总所有翻译图片，单列垂直展示
 - **📥 灵活汇总** - 支持单个会话、批量文件夹、全部结果三种汇总方式
-- **🔍 实时监控** - 任务列表实时更新，进度百分比精确显示
+- **🔍 实时监控** - 任务列表实时更新，进度百分比精确显示，控制台日志可查
 - **📱 跨平台** - Web界面无需安装，任何设备浏览器即可使用
 
 ### 🚀 性能优势
 - **⚡ 快速响应** - 平均处理时间：单张图片 10-30 秒
-- **🔋 资源优化** - 智能内存管理，支持大批量图片处理
+- **🔋 资源优化** - 智能内存管理，支持大批量图片处理（测试支持100+张图片）
 - **📈 可扩展** - 微服务架构，易于横向扩展和负载均衡
-- **🛡️ 高可用** - 异常处理完善，失败任务可重试
+- **🛡️ 高可用** - 完善的异常处理，失败任务可重试，支持每次上传创建新任务
+- **🎯 进度可控** - 前后端进度同步，97%、98%、99%细粒度更新，避免假完成
 
 ---
 
@@ -47,38 +50,97 @@
 **单张图片处理**：
 ```
 storage/
-└── session_20240131_143022_abc123/
+└── session_20260131_143022_abc123/
     ├── original/          # 原始图片
     ├── processed/         # 预处理结果
     ├── ocr/              # OCR识别结果JSON
-    └── translated/       # 最终翻译图片
+    └── translated/       # 最终翻译图片 (*_cn.jpg)
 ```
 
-**批量图片处理**（自动识别）：
+**批量图片处理**（智能批次管理）：
 ```
 storage/
-└── batch_20240131_143022/              # 批量父文件夹
-    ├── session_20240131_143022_abc/    # 图片1会话
-    ├── session_20240131_143023_def/    # 图片2会话
-    └── session_20240131_143024_ghi/    # 图片3会话
+└── batch_20260131_121807_61p5lq5z/      # 统一批次ID
+    ├── session_20260131_201807_4b86a8da/
+    ├── session_20260131_201808_5c97b9eb/
+    └── session_20260131_201809_6da8cafe/
         ├── original/
         ├── processed/
         ├── ocr/
         └── translated/
 ```
 
-### 灵活的结果汇总
-
-1. **单会话汇总** - 提取单个翻译任务结果到原文件同级目录
-2. **批量文件夹汇总** - 智能选择批量文件夹，一键合并所有会话结果
-3. **全局汇总** - 汇总所有已完成翻译到统一目录
+**收集文件夹**（汇总结果）：
+```
+storage/
+└── batch_20260131_121807_61p5lq5z_collected_20260131202030/
+    ├── 001_cn.jpg        # 来自session1
+    ├── 002_cn.jpg        # 来自session2
+    └── 003_cn.jpg        # 来自session3
+```
 
 ### 完整的翻译流程
 
 ```
-上传图片 → 文本检测 → OCR识别 → AI翻译 → 文本渲染 → 结果下载
-  ↓          ↓         ↓        ↓         ↓         ↓
-MongoDB   Python    manga-ocr  智谱AI   PIL库    Web界面
+上传图片 → 文本检测(35%) → OCR识别(55%) → AI翻译(75%) → 文本渲染(88%) → 
+保存结果(95%) → 验证文件(98%) → 完成(100%)
+  ↓          ↓              ↓             ↓            ↓           
+MongoDB   Python         manga-ocr     智谱AI       PIL库       
+```
+
+### 灵活的图片浏览
+
+**图片库功能**（/gallery.html）：
+- 批量文件夹列表 - 显示所有batch文件夹及其会话数量
+- 单个会话列表 - 显示独立的session文件夹
+- 收集文件夹 - 显示汇总后的collected文件夹
+- 点击批量文件夹 → 显示所有session → 点击"收集并展示所有图片"
+- 自动调用API收集所有translated图片到新文件夹
+- 垂直瀑布流展示所有图片，一行一张，无需逐个点击
+
+### 智能批次管理
+
+**前端批次ID生成**：
+```javascript
+function generateBatchId() {
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '');
+    const random = Math.random().toString(36).substring(2, 10);
+    return `batch_${timestamp}_${random}`;
+}
+```
+
+**优势**：
+- ✅ 19张图片统一到一个batch文件夹
+- ✅ 避免时间戳差异导致的文件夹分散
+- ✅ 支持大批量上传（测试通过100+张）
+- ✅ 便于后续批量管理和汇总
+
+### 精确的进度控制
+
+**15个进度检查点**：
+```
+10%  - 准备翻译环境
+20%  - Python翻译开始
+35%  - 检测文本区域
+45%  - 文本区域检测完成
+55%  - 识别文本中
+65%  - 文本识别完成
+75%  - 翻译文本中
+82%  - 翻译完成
+88%  - 渲染译文中
+95%  - 保存结果中
+97%  - 等待Python进程完成
+98%  - 验证结果
+99%  - 最终确认
+100% - 翻译完成（COMPLETED状态）
+```
+
+**前端严格校验**：
+```javascript
+// 只有真正完成时才启用按钮
+if (progress.status === 'COMPLETED' && progress.progress === 100) {
+    downloadBtn.disabled = false;
+}
 ```
 
 ---
@@ -628,10 +690,134 @@ POST /api/upload/collect/{sessionId}
 }
 ```
 
-### 7. 获取批量文件夹列表
+### 7. 图片库 - 获取批量文件夹列表
 
 ```http
-GET /api/upload/batch-folders
+GET /api/gallery/batch-folders
+```
+
+**响应示例**：
+
+```json
+{
+  "success": true,
+  "message": "获取批量文件夹成功",
+  "data": [
+    {
+      "folderPath": "batch_20260131_121807_61p5lq5z",
+      "sessionCount": 19,
+      "isCollected": false
+    }
+  ]
+}
+```
+
+### 8. 图片库 - 获取单个会话列表
+
+```http
+GET /api/gallery/sessions
+```
+
+**响应示例**：
+
+```json
+{
+  "success": true,
+  "message": "获取会话文件夹成功",
+  "data": [
+    {
+      "folderPath": "session_20260131_143022_abc123/translated"
+    }
+  ]
+}
+```
+
+### 9. 图片库 - 获取批次下的所有会话
+
+```http
+GET /api/gallery/batch-folders/{folder}/sessions
+```
+
+**响应示例**：
+
+```json
+{
+  "success": true,
+  "message": "获取批次会话成功",
+  "data": [
+    {
+      "folderPath": "batch_20260131_121807_61p5lq5z/session_20260131_201807_4b86a8da/translated"
+    }
+  ]
+}
+```
+
+### 10. 图片库 - 获取文件夹中的图片
+
+```http
+GET /api/gallery/folder-images?folder=batch_20260131_121807_61p5lq5z/session_20260131_201807_4b86a8da/translated
+```
+
+**响应示例**：
+
+```json
+{
+  "success": true,
+  "message": "获取图片列表成功",
+  "data": [
+    {
+      "fileName": "manga_01_cn.jpg",
+      "filePath": "batch_20260131_121807_61p5lq5z/session_20260131_201807_4b86a8da/translated/manga_01_cn.jpg",
+      "url": "/api/gallery/image?path=batch_20260131_121807_61p5lq5z/session_20260131_201807_4b86a8da/translated/manga_01_cn.jpg"
+    }
+  ]
+}
+```
+
+### 11. 图片库 - 获取收集文件夹列表
+
+```http
+GET /api/gallery/collected-folders
+```
+
+**响应示例**：
+
+```json
+{
+  "success": true,
+  "message": "获取收集文件夹成功",
+  "data": [
+    {
+      "folderPath": "batch_20260131_121807_61p5lq5z_collected_20260131202030",
+      "imageCount": 19
+    }
+  ]
+}
+```
+
+### 12. 批次收集 - 收集批次所有图片
+
+```http
+POST /api/upload/collect-batch?batchFolder=batch_20260131_121807_61p5lq5z
+```
+
+**响应示例**：
+
+```json
+{
+  "success": true,
+  "message": "收集完成！共收集 19 个文件",
+  "data": {
+    "collectionFolder": "batch_20260131_121807_61p5lq5z_collected_20260131202030",
+    "fileCount": 19
+  }
+}
+```
+
+### 13. 会话收集 - 收集单个会话图片
+
+```http
+POST /api/upload/collect-session?sessionFolder=session_20260131_143022_abc123
 ```
 
 **响应示例**：

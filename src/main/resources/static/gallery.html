@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>翻译结果展示 - MangaTrans</title>
+    <link rel="stylesheet" href="css/gallery.css?v=3.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="gallery-container">
+        <!-- 头部导航 -->
+        <header class="header">
+            <div class="header-left">
+                <a href="index.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> 返回主页
+                </a>
+                <h1><i class="fas fa-images"></i> 翻译结果展示</h1>
+            </div>
+            <div class="header-right">
+                <button id="refreshBtn" class="btn-icon" title="刷新">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 侧边栏：文件夹列表 -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-layer-group"></i> 批量文件夹</h3>
+                    <div id="batchFoldersList" class="folder-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i> 加载中...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-folder"></i> 单个文件夹</h3>
+                    <div id="sessionFoldersList" class="folder-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i> 加载中...
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 右侧：图片展示区 -->
+            <main class="content-area">
+                <!-- 欢迎提示 -->
+                <div id="welcomeMessage" class="welcome-message">
+                    <i class="fas fa-hand-pointer"></i>
+                    <h2>选择一个文件夹查看翻译结果</h2>
+                    <p>从左侧列表中选择批量文件夹或单个文件夹</p>
+                </div>
+
+                <!-- 批量文件夹的会话列表 -->
+                <div id="batchSessionsView" class="batch-sessions-view" style="display: none;">
+                    <div class="view-header">
+                        <h2 id="batchFolderTitle"></h2>
+                        <button id="closeBatchView" class="btn-close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="batchSessionsList" class="sessions-grid">
+                        <!-- 会话卡片将动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 图片展示区 -->
+                <div id="imageGalleryView" class="image-gallery-view" style="display: none;">
+                    <div class="view-header">
+                        <div>
+                            <h2 id="galleryTitle"></h2>
+                            <p class="gallery-subtitle" id="gallerySubtitle"></p>
+                        </div>
+                        <div class="view-actions">
+                            <button id="downloadAllBtn" class="btn-action" title="下载所有图片">
+                                <i class="fas fa-download"></i> 下载全部
+                            </button>
+                            <button id="closeGalleryView" class="btn-close">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 图片列表 -->
+                    <div id="imagesList" class="images-list">
+                        <!-- 图片将动态加载，一行一张，单列展示 -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 图片预览模态框 -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <img id="modalImage" src="" alt="预览图片">
+            <div class="modal-caption" id="modalCaption"></div>
+            <div class="modal-actions">
+                <button id="prevImageBtn" class="btn-nav">
+                    <i class="fas fa-chevron-left"></i> 上一张
+                </button>
+                <button id="downloadModalImageBtn" class="btn-action">
+                    <i class="fas fa-download"></i> 下载
+                </button>
+                <button id="nextImageBtn" class="btn-nav">
+                    下一张 <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/gallery.js?v=3.1"></script>
+</body>
+</html>

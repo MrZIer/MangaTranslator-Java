@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端API调试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f9f9f9;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success { background: #4CAF50; color: white; }
+        .status.error { background: #f44336; color: white; }
+        .info { color: #666; font-size: 12px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h1>前端API调试页面</h1>
+    <p>用于测试前端与后端API的连接是否正常</p>
+
+    <div class="test-section">
+        <h2>1. 测试历史记录API</h2>
+        <button onclick="testHistory()">GET /api/history</button>
+        <div class="info">测试历史记录是否能正常加载</div>
+        <div id="history-status"></div>
+        <pre id="history-result">点击按钮测试...</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 测试翻译结果API</h2>
+        <button onclick="testResults()">GET /api/upload/results</button>
+        <div class="info">测试翻译结果浏览是否能正常加载</div>
+        <div id="results-status"></div>
+        <pre id="results-result">点击按钮测试...</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 测试Gallery批量文件夹API</h2>
+        <button onclick="testGalleryBatch()">GET /api/gallery/batch-folders</button>
+        <div class="info">测试Gallery页面批量文件夹列表</div>
+        <div id="gallery-batch-status"></div>
+        <pre id="gallery-batch-result">点击按钮测试...</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>4. 测试Gallery单独会话文件夹API</h2>
+        <button onclick="testGallerySession()">GET /api/gallery/session-folders</button>
+        <div class="info">测试Gallery页面单独会话文件夹列表</div>
+        <div id="gallery-session-status"></div>
+        <pre id="gallery-session-result">点击按钮测试...</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>5. 测试服务器连接</h2>
+        <button onclick="testConnection()">测试连接</button>
+        <div class="info">测试基本的网络连接</div>
+        <div id="connection-status"></div>
+        <pre id="connection-result">点击按钮测试...</pre>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function testHistory() {
+            const statusEl = document.getElementById('history-status');
+            const resultEl = document.getElementById('history-result');
+            
+            try {
+                statusEl.innerHTML = '<span class="status">请求中...</span>';
+                const url = `${API_BASE}/api/history?page=0&size=20`;
+                console.log('请求URL:', url);
+                
+                const response = await fetch(url);
+                console.log('响应状态:', response.status);
+                
+                const data = await response.json();
+                console.log('响应数据:', data);
+                
+                if (response.ok) {
+                    statusEl.innerHTML = '<span class="status success">✓ 成功</span>';
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                    
+                    // 检查数据结构
+                    if (data.success && data.data) {
+                        const count = data.data.content ? data.data.content.length : 0;
+                        statusEl.innerHTML += `<div class="info">找到 ${count} 条历史记录</div>`;
+                    }
+                } else {
+                    statusEl.innerHTML = '<span class="status error">✗ 失败</span>';
+                    resultEl.textContent = `HTTP ${response.status}: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<span class="status error">✗ 错误</span>';
+                resultEl.textContent = 'Error: ' + error.message;
+                console.error('请求失败:', error);
+            }
+        }
+
+        async function testResults() {
+            const statusEl = document.getElementById('results-status');
+            const resultEl = document.getElementById('results-result');
+            
+            try {
+                statusEl.innerHTML = '<span class="status">请求中...</span>';
+                const url = `${API_BASE}/api/upload/results?page=0&size=10`;
+                console.log('请求URL:', url);
+                
+                const response = await fetch(url);
+                console.log('响应状态:', response.status);
+                
+                const data = await response.json();
+                console.log('响应数据:', data);
+                
+                if (response.ok) {
+                    statusEl.innerHTML = '<span class="status success">✓ 成功</span>';
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                    
+                    // 检查数据结构
+                    if (data.success && data.data) {
+                        const count = data.data.length;
+                        statusEl.innerHTML += `<div class="info">找到 ${count} 条翻译结果</div>`;
+                    }
+                } else {
+                    statusEl.innerHTML = '<span class="status error">✗ 失败</span>';
+                    resultEl.textContent = `HTTP ${response.status}: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<span class="status error">✗ 错误</span>';
+                resultEl.textContent = 'Error: ' + error.message;
+                console.error('请求失败:', error);
+            }
+        }
+
+        async function testGalleryBatch() {
+            const statusEl = document.getElementById('gallery-batch-status');
+            const resultEl = document.getElementById('gallery-batch-result');
+            
+            try {
+                statusEl.innerHTML = '<span class="status">请求中...</span>';
+                const url = `${API_BASE}/api/gallery/batch-folders`;
+                console.log('请求URL:', url);
+                
+                const response = await fetch(url);
+                console.log('响应状态:', response.status);
+                
+                const data = await response.json();
+                console.log('响应数据:', data);
+                
+                if (response.ok) {
+                    statusEl.innerHTML = '<span class="status success">✓ 成功</span>';
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                    
+                    // 检查数据结构
+                    if (data.success && data.data) {
+                        const count = data.data.length;
+                        statusEl.innerHTML += `<div class="info">找到 ${count} 个批量文件夹</div>`;
+                    }
+                } else {
+                    statusEl.innerHTML = '<span class="status error">✗ 失败</span>';
+                    resultEl.textContent = `HTTP ${response.status}: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<span class="status error">✗ 错误</span>';
+                resultEl.textContent = 'Error: ' + error.message;
+                console.error('请求失败:', error);
+            }
+        }
+
+        async function testGallerySession() {
+            const statusEl = document.getElementById('gallery-session-status');
+            const resultEl = document.getElementById('gallery-session-result');
+            
+            try {
+                statusEl.innerHTML = '<span class="status">请求中...</span>';
+                const url = `${API_BASE}/api/gallery/session-folders`;
+                console.log('请求URL:', url);
+                
+                const response = await fetch(url);
+                console.log('响应状态:', response.status);
+                
+                const data = await response.json();
+                console.log('响应数据:', data);
+                
+                if (response.ok) {
+                    statusEl.innerHTML = '<span class="status success">✓ 成功</span>';
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                    
+                    // 检查数据结构
+                    if (data.success && data.data) {
+                        const count = data.data.length;
+                        statusEl.innerHTML += `<div class="info">找到 ${count} 个会话文件夹</div>`;
+                    }
+                } else {
+                    statusEl.innerHTML = '<span class="status error">✗ 失败</span>';
+                    resultEl.textContent = `HTTP ${response.status}: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<span class="status error">✗ 错误</span>';
+                resultEl.textContent = 'Error: ' + error.message;
+                console.error('请求失败:', error);
+            }
+        }
+
+        async function testConnection() {
+            const statusEl = document.getElementById('connection-status');
+            const resultEl = document.getElementById('connection-result');
+            
+            try {
+                statusEl.innerHTML = '<span class="status">测试中...</span>';
+                
+                const info = {
+                    'API_BASE': API_BASE,
+                    'window.location.origin': window.location.origin,
+                    'window.location.href': window.location.href,
+                    'timestamp': new Date().toISOString()
+                };
+                
+                statusEl.innerHTML = '<span class="status success">✓ 前端运行正常</span>';
+                resultEl.textContent = JSON.stringify(info, null, 2);
+            } catch (error) {
+                statusEl.innerHTML = '<span class="status error">✗ 错误</span>';
+                resultEl.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // 页面加载时自动测试所有API
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('=== 前端API调试页面已加载 ===');
+            console.log('API_BASE:', API_BASE);
+        });
+    </script>
+</body>
+</html>

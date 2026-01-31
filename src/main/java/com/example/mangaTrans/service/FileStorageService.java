@@ -36,6 +36,13 @@ public class FileStorageService {
     private static final String METADATA_FILE = "metadata.json";
     
     /**
+     * 获取存储基础路径
+     */
+    public String getBasePath() {
+        return basePath;
+    }
+    
+    /**
      * 生成会话目录名称
      * 格式: session_YYYYMMDD_HHMMSS_会话ID前8位
      */
@@ -49,16 +56,24 @@ public class FileStorageService {
      * 创建会话目录结构
      * @param sessionId 会话ID
      * @param isBatch 是否为批量上传（true=创建父文件夹, false=直接创建会话文件夹）
+     * @param batchId 批次ID（同一批次使用相同文件夹名）
      */
-    public String createSessionDirectory(String sessionId, boolean isBatch) throws IOException {
+    public String createSessionDirectory(String sessionId, boolean isBatch, String batchId) throws IOException {
         String sessionDirName = generateSessionDirectoryName(sessionId);
         Path sessionPath;
         
         if (isBatch) {
             // 批量模式：创建父文件夹/会话文件夹结构
-            String batchFolderName = "batch_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String batchFolderName;
+            if (batchId != null && !batchId.isEmpty()) {
+                // 使用前端传来的batchId作为文件夹名
+                batchFolderName = batchId;
+            } else {
+                // 兼容旧逻辑：使用时间戳
+                batchFolderName = "batch_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            }
             sessionPath = Paths.get(basePath, batchFolderName, sessionDirName);
-            log.info("批量模式: 创建父文件夹 {}", batchFolderName);
+            log.info("批量模式: 使用批次文件夹 {}", batchFolderName);
         } else {
             // 单张模式：直接创建会话文件夹
             sessionPath = Paths.get(basePath, sessionDirName);

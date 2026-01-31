@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API 测试页面</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>MangaTrans API 测试</h1>
+    
+    <div class="section">
+        <h2>1. 测试批量文件夹API</h2>
+        <button onclick="testBatchFolders()">GET /api/gallery/batch-folders</button>
+        <pre id="batch-result">点击按钮测试...</pre>
+    </div>
+
+    <div class="section">
+        <h2>2. 测试单个文件夹API</h2>
+        <button onclick="testSessionFolders()">GET /api/gallery/session-folders</button>
+        <pre id="session-result">点击按钮测试...</pre>
+    </div>
+
+    <div class="section">
+        <h2>3. 测试历史记录API</h2>
+        <button onclick="testHistory()">GET /api/history</button>
+        <pre id="history-result">点击按钮测试...</pre>
+    </div>
+
+    <div class="section">
+        <h2>4. 测试图片列表API</h2>
+        <input type="text" id="folder-path" placeholder="输入文件夹路径" style="width: 500px;">
+        <button onclick="testImages()">GET /api/gallery/images</button>
+        <pre id="images-result">输入文件夹路径后测试...</pre>
+    </div>
+
+    <script>
+        async function testBatchFolders() {
+            try {
+                const response = await fetch('/api/gallery/batch-folders');
+                const data = await response.json();
+                document.getElementById('batch-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('batch-result').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testSessionFolders() {
+            try {
+                const response = await fetch('/api/gallery/session-folders');
+                const data = await response.json();
+                document.getElementById('session-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('session-result').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testHistory() {
+            try {
+                const response = await fetch('/api/history?page=0&size=20');
+                const data = await response.json();
+                document.getElementById('history-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('history-result').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testImages() {
+            const folderPath = document.getElementById('folder-path').value;
+            if (!folderPath) {
+                alert('请输入文件夹路径！');
+                return;
+            }
+            try {
+                const response = await fetch(`/api/gallery/images?folderPath=${encodeURIComponent(folderPath)}`);
+                const data = await response.json();
+                document.getElementById('images-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('images-result').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
